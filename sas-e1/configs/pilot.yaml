@@ -1,0 +1,80 @@
+# SAS-E1 pilot config — 560M model, sentiment only, minutes on any GPU/CPU.
+run_name: pilot
+seed: 0
+
+paths:
+  data_raw: data/raw
+  data_processed: data/processed
+  activations: data/activations
+  artifacts: artifacts
+  models: models
+
+model:
+  name: bigscience/bloomz-560m
+  dtype: float16
+  device: auto
+  layer: null
+  layer_fraction: 0.5
+
+steering:
+  ridge: 1.0e-3
+  sv_clip: 10.0
+  ranks: [1, 4]
+  include_full_rank: false
+  n_fit_docs: 200
+  n_stat_docs: 600
+  resamples: [0, 1]
+  trained:
+    ranks: [1]
+    seeds: [0]
+    steps: 150
+    batch_size: 64
+    lr: 0.001
+    lambda_cov: 1.0
+    standardize: false
+
+calibration:
+  multipliers: [1.0]
+
+attributes:
+  sentiment:
+    level: L1
+    kind: sentiment
+    positive: sst2_positive
+    contrast: sst2_negative
+
+generation:
+  prompts_per_attr: 16
+  max_new_tokens: 64
+  temperature: 1.0
+  top_p: 0.95
+  batch_size: 4
+  seeds: [0]
+  arms: [A, F1, F4, C1, E, R, P]
+
+matching:
+  target_tokens: null
+  max_len_percentile: 90
+
+probes:
+  n_neutral: 200
+  separation: true
+  stability: false
+
+evaluation:
+  classifier:
+    embedding_model: distilbert-base-uncased
+    max_length: 128
+    n_clf_train: 500
+    n_clf_eval: 250
+  ppl_model: null
+  judge:
+    enabled: false
+    model: gpt-4o-mini
+
+download:
+  n_sst_fit: 2000
+  n_sst_clf: 1000
+  n_sst_eval: 500
+  n_wikipedia: 500
+  n_wikipedia_neutral: 200

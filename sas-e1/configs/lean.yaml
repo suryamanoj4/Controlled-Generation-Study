@@ -1,0 +1,98 @@
+# SAS-E1 Lean config — see design doc v1.2 §2.2 / §4.1.
+run_name: lean
+seed: 0
+
+paths:
+  data_raw: data/raw
+  data_processed: data/processed
+  activations: data/activations
+  artifacts: artifacts
+  models: models
+
+model:
+  name: bigscience/bloomz-1b7
+  dtype: float16            # fp16 on CUDA, fp32 on CPU
+  device: auto              # auto | cuda | cpu
+  layer: null               # null -> use layer_fraction
+  layer_fraction: 0.5       # 50% depth (layer 12 of 24 for BLOOM)
+
+steering:
+  ridge: 1.0e-3             # covariance ridge for closed-form operator
+  sv_clip: 10.0             # clip singular values of the moment map
+  ranks: [1, 4, 16]         # closed-form rank truncations (arm F_r)
+  include_full_rank: true   # arm Ffull
+  n_fit_docs: 400           # per side, used for fitting
+  n_stat_docs: 2000         # per side, used for moment statistics
+  resamples: [0, 1, 2]      # closed-form resamples (bootstrap of stat docs)
+  trained:
+    ranks: [1, 4]           # arms C1, C4
+    seeds: [0, 1]
+    steps: 300
+    batch_size: 128
+    lr: 0.001
+    lambda_cov: 1.0
+    standardize: false
+
+calibration:
+  multipliers: [0.5, 1.0, 2.0, 4.0]   # m; alpha = m * alpha_unit (effect-norm calibrated)
+
+attributes:
+  sentiment:
+    level: L1
+    kind: sentiment
+    positive: sst2_positive
+    contrast: sst2_negative
+  toxicity:
+    level: L2
+    kind: toxicity
+    positive: civil_toxic
+    contrast: civil_benign
+  shakespeare:
+    level: L3
+    kind: style
+    positive: shakespeare
+    contrast: early_modern_drama
+  fable:
+    level: L3
+    kind: style
+    positive: moral_stories
+    contrast: wikipedia
+
+generation:
+  prompts_per_attr: 60
+  max_new_tokens: 128
+  temperature: 1.0
+  top_p: 0.95
+  batch_size: 8
+  seeds: [0, 1]
+  arms: [A, F1, F4, F16, Ffull, C1, C4, E, R, P]
+
+matching:
+  target_tokens: null       # null -> equalize to min(total pos, total neg)
+  max_len_percentile: 90    # drop docs longer than this percentile (both sides)
+
+probes:
+  n_neutral: 1000
+  separation: true
+  stability: true
+
+evaluation:
+  classifier:
+    embedding_model: distilbert-base-uncased
+    max_length: 256
+    n_clf_train: 1500
+    n_clf_eval: 800
+  ppl_model: null           # null -> same as steering model
+  judge:
+    enabled: false
+    model: gpt-4o-mini
+
+download:
+  n_sst_fit: 8000           # per class, fitting pool
+  n_sst_clf: 4000           # per class, classifier train (disjoint)
+  n_sst_eval: 2000          # per class, classifier eval / S_human (disjoint)
+  n_civil: 30000            # per class pool
+  n_wikipedia: 5000         # contrast pool
+  n_wikipedia_neutral: 1000 # held-out neutral probe corpus
+  n_moral: 4000
+  gutenberg_sleep: 0.5      # seconds between Gutendex calls

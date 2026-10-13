@@ -1,0 +1,45 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+nox/
+
+# ---------- uv / virtualenvs ----------
+.venv/
+venv/
+env/
+
+# ---------- experiment run artifacts (regenerable; see README) ----------
+sas-e1/data/
+sas-e1/models/
+sas-e1/artifacts/
+
+# ---------- notebooks ----------
+.ipynb_checkpoints/
+
+# ---------- Obsidian local state (vault notes themselves stay tracked) ----------
+**/.obsidian/workspace.json
+**/.obsidian/workspace-mobile.json
+**/.obsidian/cache/
+
+# ---------- OS / editors ----------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+*.log
+.env
+.env.*
+*.local
