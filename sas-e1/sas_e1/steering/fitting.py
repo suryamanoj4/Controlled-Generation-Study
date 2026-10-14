@@ -13,6 +13,9 @@ from .operators import Steerer
 
 def moments(X: np.ndarray, ridge: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
     X = np.asarray(X, dtype=np.float64)
+    if not np.isfinite(X).all():
+        bad = int((~np.isfinite(X).all(axis=1)).sum())
+        raise ValueError(f"moments(): {bad} non-finite activation row(s) — check extraction")
     mu = X.mean(axis=0)
     Xc = X - mu
     cov = (Xc.T @ Xc) / max(len(X) - 1, 1)
@@ -29,10 +32,12 @@ def truncate_rank(W: np.ndarray, rank: int) -> np.ndarray:
     return ((U[:, :r] * s[:r]) @ Vt[:r]).astype(np.float32)
 
 
-def _sqrtm_psd(S: np.ndarray, eps: float) -> np.ndarray:
+def _psd_sqrt_pair(S: np.ndarray, eps: float) -> tuple[np.ndarray, np.ndarray]:
+    """Symmetric PSD square root and inverse square root from one eigendecomposition."""
     w, V = np.linalg.eigh(np.asarray(S, dtype=np.float64))
     w = np.clip(w, eps, None)
-    return (V * np.sqrt(w)) @ V.T
+    sw = np.sqrt(w)
+    return (V * sw) @ V.T, (V * (1.0 / sw)) @ V.T
 
 
 # ---------------------------------------------------------------- closed forms
@@ -69,11 +74,22 @@ def fit_moment_operators(
     (Representation-Surgery / Conceptor lineage, design doc §3.3.)
     """
     d = mu_pos.shape[0]
-    sp = _sqrtm_psd(cov_pos, ridge)
-    sn = _sqrtm_psd(cov_neg, ridge)
-    M = sp @ np.linalg.inv(sn)
+    for name, arr in (("mu_pos", mu_pos), ("mu_neg", mu_neg), ("cov_pos", cov_pos), ("cov_neg", cov_neg)):
+        if not np.isfinite(arr).all():
+            raise ValueError(f"non-finite {name} in fit_moment_operators — check activations")
+    sp, _ = _psd_sqrt_pair(cov_pos, ridge)
+    _, sn_inv = _psd_sqrt_pair(cov_neg, ridge)
+    M = sp @ sn_inv
+    if not np.isfinite(M).all():
+        raise ValueError("non-finite moment map (numerical overflow) — increase ridge or check activations")
     # clip extreme singular values for stability
-    U, s, Vt = np.linalg.svd(M, full_matrices=False)
+    try:
+        U, s, Vt = np.linalg.svd(M, full_matrices=False)
+    except np.linalg.LinAlgError as exc:
+        raise ValueError(
+            f"SVD did not converge on the moment map (cond={np.linalg.cond(M):.2e}); "
+            "check activations for outliers/non-finite rows"
+        ) from exc
     s = np.clip(s, 1.0 / sv_clip, sv_clip)
     M = (U * s) @ Vt
     W = M - np.eye(d)

@@ -87,38 +87,63 @@ def extract_attr(cfg, attr: str, model, tokenizer, device, force: bool = False) 
 
     print(f"[extract:{attr}] splitting + matching corpora")
     splits = corpora.attribute_corpora(cfg, attr, tokenizer)
+    max_len = int(get(cfg, "steering.max_length", 256))
+    batch = int(get(cfg, "extraction.batch_size", 8))
+
+    def _extract_and_filter(docs, label):
+        texts = [d["text"] for d in docs]
+        print(f"[extract:{attr}] activations {label}: {len(texts)} docs")
+        X = extract_doc_vectors(
+            model, tokenizer, texts, layer, batch_size=batch, max_length=max_len, device=device
+        )
+        keep = np.isfinite(X).all(axis=1)
+        n_drop = int((~keep).sum())
+        if n_drop:
+            print(f"[extract:{attr}] {label}: dropped {n_drop}/{len(docs)} non-finite vectors")
+        kept = [d for d, k in zip(docs, keep) if bool(k)]
+        return X[keep], kept
+
+    arrays: dict[str, np.ndarray] = {}
+    arrays["X_stat_pos"], splits["stat_pos"] = _extract_and_filter(splits["stat_pos"], "stat_pos")
+    arrays["X_stat_neg"], splits["stat_neg"] = _extract_and_filter(splits["stat_neg"], "stat_neg")
+
+    neutral_docs = corpora.attach_token_counts(
+        corpora.load_pool(cfg, "neutral_wikipedia"), tokenizer, max_len,
+    )[: int(get(cfg, "probes.n_neutral", 1000))]
+    arrays["X_neutral"], neutral_kept = _extract_and_filter(neutral_docs, "neutral")
+
+    # keep fit as a subset of the docs that survived filtering
+    n_fit = int(get(cfg, "steering.n_fit_docs", 400))
+    ids_fit_pos = {id(d) for d in splits["fit_pos"]}
+    ids_fit_neg = {id(d) for d in splits["fit_neg"]}
+    splits["fit_pos"] = [d for d in splits["stat_pos"] if id(d) in ids_fit_pos][:n_fit] or splits["stat_pos"][:n_fit]
+    splits["fit_neg"] = [d for d in splits["stat_neg"] if id(d) in ids_fit_neg][:n_fit] or splits["stat_neg"][:n_fit]
+    fit_ids_pos = {id(d) for d in splits["fit_pos"]}
+    fit_ids_neg = {id(d) for d in splits["fit_neg"]}
+    arrays["fit_idx_pos"] = np.array(
+        [i for i, d in enumerate(splits["stat_pos"]) if id(d) in fit_ids_pos], dtype=np.int64
+    )
+    arrays["fit_idx_neg"] = np.array(
+        [i for i, d in enumerate(splits["stat_neg"]) if id(d) in fit_ids_neg], dtype=np.int64
+    )
+
     for key in (
         "fit_pos", "fit_neg", "stat_pos", "stat_neg",
         "clf_pos_train", "clf_neg_train", "clf_pos_eval", "clf_neg_eval",
     ):
-        write_jsonl(ad / f"{key}.jsonl", [{"text": d["text"], "source": d.get("source", ""), "n_tokens": d.get("n_tokens", 0)} for d in splits.get(key, [])])
-    save_json(ad / "diagnostics.json", splits.get("diagnostics", {}))
-
-    neutral_docs = corpora.attach_token_counts(
-        corpora.load_pool(cfg, "neutral_wikipedia"), tokenizer,
-        int(get(cfg, "steering.max_length", 256)),
-    )[: int(get(cfg, "probes.n_neutral", 1000))]
-    write_jsonl(ad / "neutral.jsonl", [{"text": d["text"]} for d in neutral_docs])
-
-    batch = int(get(cfg, "extraction.batch_size", 8))
-    max_len = int(get(cfg, "steering.max_length", 256))
-    arrays: dict[str, np.ndarray] = {}
-    for key in ("stat_pos", "stat_neg"):
-        texts = [d["text"] for d in splits[key]]
-        print(f"[extract:{attr}] activations {key}: {len(texts)} docs")
-        arrays[f"X_{key}"] = extract_doc_vectors(model, tokenizer, texts, layer, batch_size=batch, max_length=max_len, device=device)
-    arrays["X_neutral"] = extract_doc_vectors(
-        model, tokenizer, [d["text"] for d in neutral_docs], layer, batch_size=batch, max_length=max_len, device=device
-    )
-
-    ids_fit_pos = {id(d) for d in splits["fit_pos"]}
-    ids_fit_neg = {id(d) for d in splits["fit_neg"]}
-    arrays["fit_idx_pos"] = np.array([i for i, d in enumerate(splits["stat_pos"]) if id(d) in ids_fit_pos], dtype=np.int64)
-    arrays["fit_idx_neg"] = np.array([i for i, d in enumerate(splits["stat_neg"]) if id(d) in ids_fit_neg], dtype=np.int64)
-    if arrays["fit_idx_pos"].size == 0:
-        arrays["fit_idx_pos"] = np.arange(min(int(get(cfg, "steering.n_fit_docs", 400)), arrays["X_stat_pos"].shape[0]))
-    if arrays["fit_idx_neg"].size == 0:
-        arrays["fit_idx_neg"] = np.arange(min(int(get(cfg, "steering.n_fit_docs", 400)), arrays["X_stat_neg"].shape[0]))
+        write_jsonl(
+            ad / f"{key}.jsonl",
+            [{"text": d["text"], "source": d.get("source", ""), "n_tokens": d.get("n_tokens", 0)}
+             for d in splits.get(key, [])],
+        )
+    write_jsonl(ad / "neutral.jsonl", [{"text": d["text"]} for d in neutral_kept])
+    diag = dict(splits.get("diagnostics", {}))
+    diag["kept"] = {
+        "stat_pos": len(splits["stat_pos"]),
+        "stat_neg": len(splits["stat_neg"]),
+        "neutral": len(neutral_kept),
+    }
+    save_json(ad / "diagnostics.json", diag)
 
     ap = activations_path(cfg, attr)
     ensure_dir(ap.parent)

@@ -51,72 +51,56 @@ def _shuffle(seq: list, seed: int) -> list:
 def split_pool(
     pos: list[dict],
     neg: list[dict],
-    n_stat: int,
-    n_fit: int,
+    n_pool: int,
     n_clf_train: int,
     n_clf_eval: int,
     seed: int = 0,
 ) -> dict:
-    """Document-level split, disjoint classifier sets; fit is a subset of stat.
+    """Reserve disjoint classifier sets; return an oversized steering pool per side.
 
-    Returns dict with keys stat_pos/stat_neg/fit_pos/fit_neg/clf_pos_train/... .
+    The pool is intentionally larger than the final stats size because matching drops
+    short/long documents afterwards. Keys: pool_pos/pool_neg + clf_*_train/_eval.
     """
     out: dict[str, list[dict]] = {}
     for label, docs in (("pos", pos), ("neg", neg)):
         docs = _shuffle(docs, seed + (0 if label == "pos" else 1))
-        need = n_stat + n_clf_train + n_clf_eval
+        need = n_pool + n_clf_train + n_clf_eval
         if len(docs) < need:
             print(f"[split] WARNING: {label} has {len(docs)} docs, wanted {need}")
-        stat = docs[:n_stat]
-        clf_train = docs[n_stat : n_stat + n_clf_train]
-        clf_eval = docs[n_stat + n_clf_train : n_stat + n_clf_train + n_clf_eval]
-        fit = _shuffle(stat, seed + 100)[: min(n_fit, len(stat))]
-        out[f"stat_{label}"] = stat
-        out[f"fit_{label}"] = fit
-        out[f"clf_{label}_train"] = clf_train
-        out[f"clf_{label}_eval"] = clf_eval
+        out[f"pool_{label}"] = docs[:n_pool]
+        out[f"clf_{label}_train"] = docs[n_pool : n_pool + n_clf_train]
+        out[f"clf_{label}_eval"] = docs[n_pool + n_clf_train : n_pool + n_clf_train + n_clf_eval]
     return out
 
 
 def split_pool_by_source(
     pos: list[dict],
     neg: list[dict],
-    n_stat: int,
-    n_fit: int,
+    n_pool: int,
     n_clf_train: int,
     n_clf_eval: int,
     seed: int = 0,
 ) -> dict:
-    """Like `split_pool`, but whole `source` groups (e.g., plays) stay together."""
+    """Like `split_pool`, but whole `source` groups (e.g., plays) stay together.
+
+    `n_pool` is advisory here: all groups not reserved for the classifier sets go
+    into the steering pool, and matching/trimming happens afterwards.
+    """
     out: dict[str, list[dict]] = {}
     for label, docs in (("pos", pos), ("neg", neg)):
         groups: dict[str, list[dict]] = {}
         for d in docs:
             groups.setdefault(d.get("source", "unknown"), []).append(d)
         keys = _shuffle(list(groups), seed + (0 if label == "pos" else 1))
-        clf_eval, clf_train, stat, used = [], [], [], set()
-        for key in keys:
-            if len(clf_eval) < n_clf_eval:
-                clf_eval += groups[key]
-                used.add(key)
-            elif len(clf_train) < n_clf_train:
-                clf_train += groups[key]
-                used.add(key)
-            elif len(stat) < n_stat:
-                stat += groups[key]
-                used.add(key)
-        if len(stat) < n_stat:  # top up randomly from unused groups
-            for key in keys:
-                if key in used:
-                    continue
-                stat += groups[key]
-                if len(stat) >= n_stat:
-                    break
-        fit = _shuffle(stat, seed + 100)[: min(n_fit, len(stat))]
-        out[f"stat_{label}"] = stat
-        out[f"fit_{label}"] = fit
-        out[f"clf_{label}_train"] = clf_train
-        out[f"clf_{label}_eval"] = clf_eval
+        n_groups = len(keys)
+        n_eval_groups = min(2, max(1, n_groups // 3))
+        n_train_groups = min(2, max(1, (n_groups - n_eval_groups) // 3))
+        eval_keys = keys[:n_eval_groups]
+        train_keys = keys[n_eval_groups : n_eval_groups + n_train_groups]
+        pool_keys = keys[n_eval_groups + n_train_groups :]
+        out[f"pool_{label}"] = [d for k in pool_keys for d in groups[k]]
+        out[f"clf_{label}_train"] = [d for k in train_keys for d in groups[k]]
+        out[f"clf_{label}_eval"] = [d for k in eval_keys for d in groups[k]]
     return out
 
 
@@ -127,7 +111,7 @@ def match_corpora(
     neg: list[dict],
     seed: int = 0,
     max_len_percentile: float = 90.0,
-    min_tokens: int = 10,
+    min_tokens: int = 4,
 ) -> tuple[list[dict], list[dict], dict]:
     """Equalize token volume and length distributions between positive and contrast.
 
@@ -207,7 +191,11 @@ def match_corpora(
 # ---------------------------------------------------------------- attribute assembly
 
 def attribute_corpora(cfg, attr_key: str, tokenizer, seed: int | None = None) -> dict:
-    """Load + split + match all corpora needed for one attribute."""
+    """Load + split + match all corpora needed for one attribute.
+
+    Order: reserve disjoint classifier sets from the raw pools first, then match an
+    oversized steering pool (matching drops short/long docs), then take stat/fit.
+    """
     attr = getattr(cfg.attributes, attr_key)
     seed = int(get(cfg, "seed", 0)) if seed is None else seed
     max_length = int(get(cfg, "steering.max_length", 256))
@@ -218,21 +206,29 @@ def attribute_corpora(cfg, attr_key: str, tokenizer, seed: int | None = None) ->
     n_fit = int(get(cfg, "steering.n_fit_docs", 400))
     n_clf_train = int(get(cfg, "evaluation.classifier.n_clf_train", 1500))
     n_clf_eval = int(get(cfg, "evaluation.classifier.n_clf_eval", 800))
+    n_pool = max(3 * n_stat, n_stat + 600)
 
     splitter = split_pool_by_source if attr_key == "shakespeare" else split_pool
-    splits = splitter(pos, neg, n_stat, n_fit, n_clf_train, n_clf_eval, seed=seed)
+    splits = splitter(pos, neg, n_pool, n_clf_train, n_clf_eval, seed=seed)
 
     pos_m, neg_m, diag = match_corpora(
-        splits["stat_pos"], splits["stat_neg"], seed=seed,
+        splits["pool_pos"], splits["pool_neg"], seed=seed,
         max_len_percentile=float(get(cfg, "matching.max_len_percentile", 90.0)),
+        min_tokens=int(get(cfg, "matching.min_tokens", 4)),
     )
-    splits["stat_pos"], splits["stat_neg"] = pos_m, neg_m
-    # keep fit as subset of the matched stat docs
-    fit_ids = {id(d) for d in splits["fit_pos"]}
-    splits["fit_pos"] = [d for d in pos_m if id(d) in fit_ids][:n_fit] or pos_m[:n_fit]
-    fit_ids_n = {id(d) for d in splits["fit_neg"]}
-    splits["fit_neg"] = [d for d in neg_m if id(d) in fit_ids_n][:n_fit] or neg_m[:n_fit]
+    diag["pre_match_pool"] = {"pos": len(splits["pool_pos"]), "neg": len(splits["pool_neg"])}
+    diag["requested_stat_docs"] = n_stat
+    if len(pos_m) < n_stat:
+        print(f"[corpora:{attr_key}] WARNING: only {len(pos_m)} matched positive docs (< {n_stat})")
+    if len(neg_m) < n_stat:
+        print(f"[corpora:{attr_key}] WARNING: only {len(neg_m)} matched contrast docs (< {n_stat})")
+    pos_m, neg_m = _shuffle(pos_m, seed + 7), _shuffle(neg_m, seed + 8)
 
+    splits["stat_pos"], splits["stat_neg"] = pos_m[:n_stat], neg_m[:n_stat]
+    splits["fit_pos"] = splits["stat_pos"][:n_fit]
+    splits["fit_neg"] = splits["stat_neg"][:n_fit]
+    splits.pop("pool_pos", None)
+    splits.pop("pool_neg", None)
     splits["diagnostics"] = diag
     splits["attr_key"] = attr_key
     splits["kind"] = getattr(attr, "kind", "style")

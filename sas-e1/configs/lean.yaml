@@ -70,6 +70,7 @@ generation:
 matching:
   target_tokens: null       # null -> equalize to min(total pos, total neg)
   max_len_percentile: 90    # drop docs longer than this percentile (both sides)
+  min_tokens: 4             # sentence-level corpora need a low floor (SST-2)
 
 probes:
   n_neutral: 1000
@@ -92,7 +93,7 @@ download:
   n_sst_clf: 4000           # per class, classifier train (disjoint)
   n_sst_eval: 2000          # per class, classifier eval / S_human (disjoint)
   n_civil: 30000            # per class pool
-  n_wikipedia: 5000         # contrast pool
+  n_wikipedia: 16000        # contrast pool (fable contrast + oversized buffer)
   n_wikipedia_neutral: 1000 # held-out neutral probe corpus
-  n_moral: 4000
+  n_moral: 12000
   gutenberg_sleep: 0.5      # seconds between Gutendex calls

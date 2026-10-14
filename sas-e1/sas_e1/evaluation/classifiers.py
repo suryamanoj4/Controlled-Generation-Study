@@ -53,7 +53,7 @@ class EmbeddingLRClassifier:
         self.tokenizer = AutoTokenizer.from_pretrained(encoder_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.encoder = AutoModel.from_pretrained(encoder_name, torch_dtype=torch.float32).to(self.device)
+        self.encoder = AutoModel.from_pretrained(encoder_name).to(self.device)
         self.max_length = max_length
         self.scaler = StandardScaler()
         self.clf = LogisticRegression(max_iter=2000, C=1.0)

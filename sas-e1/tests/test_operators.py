@@ -69,3 +69,16 @@ def test_trained_adapter_reduces_loss():
     st = fitting.fit_trained_adapter(Xn, mu_p, cov_p, rank=2, steps=60, batch_size=64, seed=0)
     assert st.W.shape == (Xn.shape[1], Xn.shape[1])
     assert st.meta["final_loss"] < st.meta["loss_first"]
+
+
+def test_moment_operator_rejects_nonfinite():
+    Xn, Xp, mu_p, cov_p, mu_n, cov_n = synthetic()
+    with pytest.raises(ValueError):
+        fitting.fit_moment_operators(mu_p, cov_p * np.nan, mu_n, cov_n, ridge=1e-3, ranks=[1])
+
+
+def test_moments_rejects_nonfinite():
+    X = np.zeros((10, 4), dtype=np.float32)
+    X[3, 2] = np.nan
+    with pytest.raises(ValueError):
+        fitting.moments(X)

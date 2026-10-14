@@ -113,7 +113,7 @@ def strip_gutenberg(text: str) -> str:
     return text.strip()
 
 
-def _chunk_by_paragraphs(text: str, target_words: int = 220) -> list[str]:
+def _chunk_by_paragraphs(text: str, target_words: int = 150) -> list[str]:
     """Split a play into stable ~target-word documents (paragraph blocks)."""
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if len(p.strip().split()) >= 20]
     docs, buf, count = [], [], 0

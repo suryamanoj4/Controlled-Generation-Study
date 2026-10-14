@@ -55,6 +55,7 @@ generation:
 matching:
   target_tokens: null
   max_len_percentile: 90
+  min_tokens: 4
 
 probes:
   n_neutral: 200

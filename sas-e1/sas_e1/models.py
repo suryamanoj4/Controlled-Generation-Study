@@ -33,7 +33,11 @@ def load_model_and_tokenizer(cfg) -> tuple:
     dtype = DTYPES.get(getattr(cfg.model, "dtype", "float16"), torch.float16)
     if device.type == "cpu":
         dtype = torch.float32
-    model = AutoModelForCausalLM.from_pretrained(name, torch_dtype=dtype)
+    model = None
+    try:
+        model = AutoModelForCausalLM.from_pretrained(name, dtype=dtype)
+    except TypeError:  # transformers < 4.56
+        model = AutoModelForCausalLM.from_pretrained(name, torch_dtype=dtype)
     model.to(device)
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained(name)
