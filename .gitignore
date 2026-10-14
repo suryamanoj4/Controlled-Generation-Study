@@ -30,6 +30,7 @@ sas-e1/artifacts/
 # ---------- Obsidian local state (vault notes themselves stay tracked) ----------
 **/.obsidian/workspace.json
 **/.obsidian/workspace-mobile.json
+**/.obsidian/graph.json
 **/.obsidian/cache/
 
 # ---------- OS / editors ----------
