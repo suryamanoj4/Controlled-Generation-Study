@@ -263,9 +263,36 @@ def prepare_wikipedia(cfg, force: bool = False) -> dict:
     return {"n_contrast": len(contrast), "n_neutral": len(neutral)}
 
 
-def prepare_moral_stories(cfg, force: bool = False) -> dict:
-    from datasets import load_dataset
+_MORAL_STORY_FIELDS = ("situation", "intention", "moral_action", "moral_consequence")
 
+
+def _load_moral_stories_rows(seed: int = 0) -> list[dict]:
+    """Load Moral Stories from the auto-converted Parquet branch.
+
+    `datasets>=5` no longer supports dataset loading scripts, so
+    `demelin/moral_stories` (script-only) cannot be loaded directly. The HF
+    auto-convert branch `refs/convert/parquet` hosts the same data as Parquet.
+    """
+    import random
+
+    import pyarrow.parquet as pq
+    from huggingface_hub import hf_hub_download, list_repo_files
+
+    repo, revision = "demelin/moral_stories", "refs/convert/parquet"
+    files = list_repo_files(repo, repo_type="dataset", revision=revision)
+    candidates = sorted(f for f in files if f.startswith("full/") and f.endswith(".parquet"))
+    if not candidates:
+        raise RuntimeError(f"no Parquet files found for {repo}@{revision}")
+    train = [f for f in candidates if "/train/" in f] or candidates
+    rows: list[dict] = []
+    for fname in train:
+        local = hf_hub_download(repo, fname, repo_type="dataset", revision=revision)
+        rows.extend(pq.read_table(local).to_pylist())
+    random.Random(seed).shuffle(rows)
+    return rows
+
+
+def prepare_moral_stories(cfg, force: bool = False) -> dict:
     out_dir = ensure_dir(Path(get(cfg, "paths.data_processed", "data/processed")))
     path = out_dir / "moral_stories.jsonl"
     if path.exists() and not force:
@@ -273,18 +300,18 @@ def prepare_moral_stories(cfg, force: bool = False) -> dict:
         return {"skipped": True}
 
     n_docs = int(get(cfg, "download.n_moral", 4000))
-    ds = load_dataset("demelin/moral_stories", "full", split="train")
-    ds = ds.shuffle(seed=0).select(range(min(n_docs, len(ds))))
-    rows = []
-    for r in ds:
+    raw = _load_moral_stories_rows(seed=int(get(cfg, "seed", 0)))
+    rows: list[dict] = []
+    for r in raw:
         text = " ".join(
-            str(r.get(k, "")).strip()
-            for k in ("situation", "intention", "moral_action", "moral_consequence")
-        )
+            str(r.get(k) or "").strip() for k in _MORAL_STORY_FIELDS
+        ).strip()
         if len(text.split()) >= 20:
             rows.append({"text": text, "source": "moral_stories", "label": 1})
+        if len(rows) >= n_docs:
+            break
     write_jsonl(path, rows)
-    print(f"[moral_stories] wrote {len(rows)} docs")
+    print(f"[moral_stories] wrote {len(rows)} docs (from {len(raw)} parquet rows)")
     return {"n": len(rows)}
 
 
