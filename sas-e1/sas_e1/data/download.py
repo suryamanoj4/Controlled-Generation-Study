@@ -11,33 +11,55 @@ import time
 from pathlib import Path
 
 from ..config import get
-from ..utils import ensure_dir, save_json, write_jsonl
+from ..utils import ensure_dir, read_jsonl, save_json, write_jsonl
 
 # ---------------------------------------------------------------- Gutenberg
 
 # Curated, era/genre-matched sources: Shakespeare plays vs other early-modern drama.
-SHAKESPEARE_QUERIES = [
-    "hamlet william shakespeare",
-    "macbeth william shakespeare",
-    "romeo and juliet william shakespeare",
-    "othello william shakespeare",
-    "king lear william shakespeare",
-    "the tempest william shakespeare",
-    "a midsummer nights dream william shakespeare",
-    "julius caesar william shakespeare",
-    "much ado about nothing william shakespeare",
-    "twelfth night william shakespeare",
-    "the merchant of venice william shakespeare",
-    "henry v william shakespeare",
-]
-CONTRAST_QUERIES = [
-    "doctor faustus christopher marlowe",
-    "tamburlaine christopher marlowe",
-    "the jew of malta christopher marlowe",
-    "the alchemist ben jonson",
-    "volpone ben jonson",
-    "the duchess of malfi john webster",
-    "the white devil john webster",
+# IDs verified against Project Gutenberg on 2026-10-15 (direct pg{id}.txt URLs return 200
+# with the expected titles). Gutendex search remains only as a fallback for works whose
+# id is not pinned — the live API is rate-limited and frequently times out.
+GUTENBERG_WORKS = [
+    # --- positive: Shakespeare plays (label=1)
+    {"key": "hamlet", "title": "Hamlet", "author": "shakespeare", "group": "pos", "id": 1524,
+     "query": "hamlet william shakespeare"},
+    {"key": "macbeth", "title": "Macbeth", "author": "shakespeare", "group": "pos", "id": 1533,
+     "query": "macbeth william shakespeare"},
+    {"key": "romeo_and_juliet", "title": "Romeo and Juliet", "author": "shakespeare", "group": "pos",
+     "id": 1513, "query": "romeo and juliet william shakespeare"},
+    {"key": "othello", "title": "Othello", "author": "shakespeare", "group": "pos", "id": 1531,
+     "query": "othello william shakespeare"},
+    {"key": "king_lear", "title": "King Lear", "author": "shakespeare", "group": "pos", "id": 1532,
+     "query": "king lear william shakespeare"},
+    {"key": "the_tempest", "title": "The Tempest", "author": "shakespeare", "group": "pos", "id": 1540,
+     "query": "the tempest william shakespeare"},
+    {"key": "midsummer", "title": "A Midsummer Night's Dream", "author": "shakespeare", "group": "pos",
+     "id": 1514, "query": "a midsummer nights dream william shakespeare"},
+    {"key": "julius_caesar", "title": "Julius Caesar", "author": "shakespeare", "group": "pos",
+     "id": 1522, "query": "julius caesar william shakespeare"},
+    {"key": "much_ado", "title": "Much Ado About Nothing", "author": "shakespeare", "group": "pos",
+     "id": 1519, "query": "much ado about nothing william shakespeare"},
+    {"key": "twelfth_night", "title": "Twelfth Night", "author": "shakespeare", "group": "pos",
+     "id": 1526, "query": "twelfth night william shakespeare"},
+    {"key": "merchant_of_venice", "title": "The Merchant of Venice", "author": "shakespeare",
+     "group": "pos", "id": 1515, "query": "the merchant of venice william shakespeare"},
+    {"key": "henry_v", "title": "King Henry V", "author": "shakespeare", "group": "pos", "id": 1521,
+     "query": "henry v william shakespeare"},
+    # --- contrast: other early-modern drama (label=0)
+    {"key": "doctor_faustus", "title": "The Tragical History of Doctor Faustus", "author": "marlowe",
+     "group": "neg", "id": 779, "query": "doctor faustus christopher marlowe"},
+    {"key": "tamburlaine", "title": "Tamburlaine the Great — Part 1", "author": "marlowe",
+     "group": "neg", "id": 1094, "query": "tamburlaine christopher marlowe"},
+    {"key": "jew_of_malta", "title": "The Jew of Malta", "author": "marlowe", "group": "neg",
+     "id": 901, "query": "the jew of malta christopher marlowe"},
+    {"key": "the_alchemist", "title": "The Alchemist", "author": "jonson", "group": "neg", "id": 4081,
+     "query": "the alchemist ben jonson"},
+    {"key": "volpone", "title": "Volpone; Or, The Fox", "author": "jonson", "group": "neg", "id": 4039,
+     "query": "volpone ben jonson"},
+    {"key": "duchess_of_malfi", "title": "The Duchess of Malfi", "author": "webster", "group": "neg",
+     "id": 2232, "query": "the duchess of malfi john webster"},
+    {"key": "white_devil", "title": "The White Devil", "author": "webster", "group": "neg",
+     "id": 12915, "query": "the white devil john webster"},
 ]
 _AUTHOR_MATCH = {
     "shakespeare": "shakespeare",
@@ -46,24 +68,32 @@ _AUTHOR_MATCH = {
     "webster": "webster",
 }
 
+
+def _pg_url(book_id: int) -> str:
+    return f"https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.txt"
+
 _GUTENDEX = "https://gutendex.com/books"
 _START_RE = re.compile(r"\*\*\* START OF (?:THE|THIS) PROJECT GUTENBERG EBOOK.*?\*\*\*", re.I | re.S)
 _END_RE = re.compile(r"\*\*\* END OF (?:THE|THIS) PROJECT GUTENBERG EBOOK.*?\*\*\*", re.I | re.S)
 
 
-def resolve_gutenberg(query: str, author_key: str, sleep: float = 0.5) -> dict | None:
-    """Resolve a title query to a Gutenberg ebook via the Gutendex API."""
+def resolve_gutenberg(query: str, author_key: str, sleep: float = 0.5,
+                      attempts: int = 3) -> dict | None:
+    """Resolve a title query via Gutendex (fallback path; retries transient failures)."""
     import requests
 
-    try:
-        resp = requests.get(_GUTENDEX, params={"search": query}, timeout=30)
-        resp.raise_for_status()
-        results = resp.json().get("results", [])
-    except Exception as exc:  # network/API issues are non-fatal
-        print(f"[gutenberg] lookup failed for '{query}': {exc}")
-        return None
-    finally:
-        time.sleep(sleep)
+    results: list = []
+    for attempt in range(attempts):
+        try:
+            resp = requests.get(_GUTENDEX, params={"search": query}, timeout=60)
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+            break
+        except Exception as exc:  # network/API issues are non-fatal
+            print(f"[gutenberg] lookup failed ({attempt + 1}/{attempts}) for '{query}': {exc}")
+            if attempt < attempts - 1:
+                time.sleep(2.0 * (2 ** attempt))
+    time.sleep(sleep)
 
     want = _AUTHOR_MATCH[author_key]
     for book in results:
@@ -81,26 +111,19 @@ def resolve_gutenberg(query: str, author_key: str, sleep: float = 0.5) -> dict |
     return None
 
 
-def download_gutenberg_text(url: str, fallback_id: int | None = None) -> str | None:
+def _http_get_text(url: str, attempts: int = 3) -> str | None:
     import requests
 
-    try:
-        resp = requests.get(url, timeout=60)
-        resp.raise_for_status()
-        text = resp.text
-    except Exception as exc:
-        print(f"[gutenberg] download failed {url}: {exc}")
-        if fallback_id is None:
-            return None
+    for attempt in range(attempts):
         try:
-            alt = f"https://www.gutenberg.org/cache/epub/{fallback_id}/pg{fallback_id}.txt"
-            resp = requests.get(alt, timeout=60)
+            resp = requests.get(url, timeout=60)
             resp.raise_for_status()
-            text = resp.text
-        except Exception as exc2:
-            print(f"[gutenberg] fallback failed {alt}: {exc2}")
-            return None
-    return strip_gutenberg(text)
+            return resp.text
+        except Exception as exc:
+            print(f"[gutenberg] download failed ({attempt + 1}/{attempts}) {url}: {exc}")
+            if attempt < attempts - 1:
+                time.sleep(2.0 * (2 ** attempt))
+    return None
 
 
 def strip_gutenberg(text: str) -> str:
@@ -129,48 +152,67 @@ def _chunk_by_paragraphs(text: str, target_words: int = 150) -> list[str]:
     return docs
 
 
+def _load_or_fetch_work(cfg, work: dict, sleep: float, force: bool) -> tuple[list[dict], dict]:
+    """Fetch one work (per-work cache) and return (rows, resolution info)."""
+    cache_dir = ensure_dir(Path(get(cfg, "paths.data_raw", "data/raw")) / "gutenberg")
+    cache_path = cache_dir / f"{work['key']}.jsonl"
+    info = {"key": work["key"], "title": work["title"], "group": work["group"], "id": work.get("id")}
+    if cache_path.exists() and not force:
+        info["status"] = "cached"
+        return read_jsonl(cache_path), info
+
+    book = {"id": work["id"], "title": work["title"]} if work.get("id") else resolve_gutenberg(
+        work["query"], work["author"], sleep=sleep
+    )
+    if not book:
+        print(f"[gutenberg] {work['key']}: FAILED to resolve — will retry next run")
+        info["status"] = "failed_resolve"
+        return [], info
+
+    text = _http_get_text(_pg_url(book["id"]))
+    if not text:
+        print(f"[gutenberg] {work['key']}: FAILED to download — will retry next run")
+        info["status"] = "failed_download"
+        return [], info
+
+    docs = _chunk_by_paragraphs(strip_gutenberg(text))
+    rows = [
+        {"text": doc, "source": book["title"], "source_id": book["id"],
+         "label": 1 if work["group"] == "pos" else 0}
+        for doc in docs
+    ]
+    write_jsonl(cache_path, rows)
+    info.update({"status": "fetched", "id": book["id"], "title": book["title"], "n_docs": len(rows)})
+    print(f"[gutenberg] {book['title']} -> {len(rows)} docs")
+    return rows, info
+
+
 def prepare_gutenberg(cfg, force: bool = False) -> dict:
-    """Shakespeare plays vs other early-modern drama (Marlowe/Jonson/Webster)."""
+    """Shakespeare plays vs other early-modern drama (Marlowe/Jonson/Webster).
+
+    Works with pinned ids download directly from Project Gutenberg (no Gutendex search);
+    successful works are cached per work, so re-runs only retry the ones that failed.
+    """
     out_dir = ensure_dir(Path(get(cfg, "paths.data_processed", "data/processed")))
     manifest_path = out_dir / "gutenberg_manifest.json"
     pos_path, neg_path = out_dir / "shakespeare.jsonl", out_dir / "early_modern_drama.jsonl"
-    if pos_path.exists() and neg_path.exists() and not force:
-        print("[gutenberg] cached")
-        return {"skipped": True}
-
     sleep = float(get(cfg, "download.gutenberg_sleep", 0.5))
-    resolved, rows_pos, rows_neg = [], [], []
-    for label, queries, rows in (
-        ("shakespeare", SHAKESPEARE_QUERIES, rows_pos),
-        ("contrast", CONTRAST_QUERIES, rows_neg),
-    ):
-        for query in queries:
-            book = resolve_gutenberg(query, label if label == "shakespeare" else _author_from_query(query), sleep=sleep)
-            if not book:
-                print(f"[gutenberg] no result for {query}")
-                continue
-            text = download_gutenberg_text(book["url"], fallback_id=book["id"])
-            if not text:
-                continue
-            docs = _chunk_by_paragraphs(text)
-            for i, doc in enumerate(docs):
-                rows.append({"text": doc, "source": book["title"], "source_id": book["id"], "label": 1 if label == "shakespeare" else 0})
-            resolved.append({"query": query, "id": book["id"], "title": book["title"], "n_docs": len(docs)})
-            print(f"[gutenberg] {book['title']} -> {len(docs)} docs")
+
+    rows_pos, rows_neg, resolved = [], [], []
+    for work in GUTENBERG_WORKS:
+        rows, info = _load_or_fetch_work(cfg, work, sleep, force)
+        (rows_pos if work["group"] == "pos" else rows_neg).extend(rows)
+        resolved.append(info)
 
     write_jsonl(pos_path, rows_pos)
     write_jsonl(neg_path, rows_neg)
     save_json(manifest_path, {"resolved": resolved, "n_pos": len(rows_pos), "n_neg": len(rows_neg)})
-    if len(rows_pos) < 200 or len(rows_neg) < 100:
-        print("[gutenberg] WARNING: fewer docs than expected — check network/API results")
-    return {"n_pos": len(rows_pos), "n_neg": len(rows_neg), "resolved": resolved}
-
-
-def _author_from_query(query: str) -> str:
-    for key in _AUTHOR_MATCH:
-        if key in query:
-            return key
-    return "shakespeare"
+    failed = [r["key"] for r in resolved if str(r.get("status", "")).startswith("failed")]
+    if failed:
+        print(f"[gutenberg] WARNING: {len(failed)} work(s) failed ({', '.join(failed)}) — re-run to retry")
+    if len(rows_pos) < 300 or len(rows_neg) < 150:
+        print("[gutenberg] WARNING: fewer docs than expected — check gutenberg_manifest.json")
+    return {"n_pos": len(rows_pos), "n_neg": len(rows_neg), "failed": failed}
 
 
 # ---------------------------------------------------------------- HF datasets
