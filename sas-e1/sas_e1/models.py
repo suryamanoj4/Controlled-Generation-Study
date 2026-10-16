@@ -15,6 +15,22 @@ DTYPES = {
 }
 
 
+def _resolve_dtype(name: str, device: torch.device) -> torch.dtype:
+    """dtype policy: 'auto' = bf16 when the GPU supports it, else fp32.
+
+    BLOOM-family models are bf16-native; fp16 inference overflows on some GPUs
+    (e.g., T4), producing inf/NaN hidden states and sampling failures.
+    """
+    if name == "auto":
+        if device.type == "cuda" and getattr(torch.cuda, "is_bf16_supported", lambda: False)():
+            return torch.bfloat16
+        return torch.float32
+    dtype = DTYPES.get(name, torch.float32)
+    if device.type == "cpu":
+        return torch.float32
+    return dtype
+
+
 # ---------------------------------------------------------------- loading
 
 def resolve_device(device: str = "auto") -> torch.device:
@@ -30,9 +46,7 @@ def resolve_device(device: str = "auto") -> torch.device:
 def load_model_and_tokenizer(cfg) -> tuple:
     name = cfg.model.name
     device = resolve_device(getattr(cfg.model, "device", "auto"))
-    dtype = DTYPES.get(getattr(cfg.model, "dtype", "float16"), torch.float16)
-    if device.type == "cpu":
-        dtype = torch.float32
+    dtype = _resolve_dtype(str(getattr(cfg.model, "dtype", "auto")), device)
     model = None
     try:
         model = AutoModelForCausalLM.from_pretrained(name, dtype=dtype)

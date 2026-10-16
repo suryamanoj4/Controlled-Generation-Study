@@ -19,7 +19,7 @@ paths:
 
 model:
   name: bigscience/bloomz-1b7
-  dtype: float16
+  dtype: auto                 # auto = bf16 if the GPU supports it, else fp32
   device: auto
   layer: null
   layer_fraction: 0.5

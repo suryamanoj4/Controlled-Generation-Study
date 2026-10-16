@@ -99,6 +99,11 @@ def extract_attr(cfg, attr: str, model, tokenizer, device, force: bool = False) 
         n_drop = int((~keep).sum())
         if n_drop:
             print(f"[extract:{attr}] {label}: dropped {n_drop}/{len(docs)} non-finite vectors")
+            if n_drop > 0.2 * max(len(docs), 1):
+                print(
+                    f"[extract:{attr}] {label}: large non-finite rate — switch "
+                    "model.dtype to 'auto' or 'float32' (BLOOM fp16 overflows on some GPUs)"
+                )
         kept = [d for d, k in zip(docs, keep) if bool(k)]
         return X[keep], kept
 

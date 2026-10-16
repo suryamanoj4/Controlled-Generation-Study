@@ -11,7 +11,8 @@ paths:
 
 model:
   name: bigscience/bloomz-560m
-  dtype: float16
+  dtype: auto                 # auto = bf16 if the GPU supports it, else fp32
+                            # (avoid fp16: BLOOM fp16 overflows to inf/NaN on some GPUs)
   device: auto
   layer: null
   layer_fraction: 0.5

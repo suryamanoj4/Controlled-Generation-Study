@@ -11,7 +11,8 @@ paths:
 
 model:
   name: bigscience/bloomz-1b7
-  dtype: float16            # fp16 on CUDA, fp32 on CPU
+  dtype: auto                 # auto = bf16 if the GPU supports it, else fp32
+                            # (avoid fp16: BLOOM fp16 overflows to inf/NaN on some GPUs)
   device: auto              # auto | cuda | cpu
   layer: null               # null -> use layer_fraction
   layer_fraction: 0.5       # 50% depth (layer 12 of 24 for BLOOM)

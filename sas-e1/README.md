@@ -86,9 +86,10 @@ uv run --with numpy --with pyyaml python scripts/smoke_test.py
 
 ## Hardware expectations (Lean)
 
-- Model: `bigscience/bloomz-1b7` (fp16, T4 16 GB safe) or `bigscience/bloomz-560m` (pilot).
-- Budget target: ~1.5–2 h GPU (extraction ~15 min, cached-activation fits ~5 min,
-  generation ~40–60 min, metrics ~10 min).
+- Model: `bigscience/bloomz-1b7` or `bigscience/bloomz-560m` (pilot); dtype `auto` —
+  bf16 on Ampere/L4-class GPUs, fp32 elsewhere. **Avoid fp16**: BLOOM fp16 overflows to
+  inf/NaN on some GPUs (e.g., T4), which breaks extraction and sampling.
+- Budget target: ~1.5–2 h GPU on bf16-class hardware (fp32 on T4 is roughly 2× slower).
 - E1b Indic: same model, **+60–90 min** as a separate session (4 attributes).
 - Trained arms fit **on cached activations only** — no backprop through the base model.
 
