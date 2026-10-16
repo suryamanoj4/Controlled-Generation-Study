@@ -362,8 +362,6 @@ def eval_attr(cfg, attr: str, model, tokenizer, device, force: bool = False) -> 
 
 def _condition_row(cfg, arm, m, alpha, seed, gens, baseline_gens, clf, model, tokenizer,
                    base_ppl_seed, gc, device, prompts, is_prompting: bool) -> dict:
-    import numpy as np
-
     s = metric_utils.strength(clf, gens)
     ppl = metric_utils.perplexity(model, tokenizer, gens, batch_size=gc["batch_size"], device=device)
     ppl_ratio = float(ppl / base_ppl_seed) if base_ppl_seed and np.isfinite(base_ppl_seed) else float("nan")
@@ -388,7 +386,7 @@ def _condition_row(cfg, arm, m, alpha, seed, gens, baseline_gens, clf, model, to
         "coherence": coherence,
         "distinct2": float(metric_utils.distinct_2(gens)),
         "rep4_mean": float(np.mean([metric_utils.repetition_4(g) for g in gens])) if gens else float("nan"),
-        "content_sim_mean": float(np.nanmean(sims)),
+        "content_sim_mean": float(np.nanmean(sims)) if np.isfinite(np.asarray(sims, dtype=float)).any() else float("nan"),
         "is_prompting": bool(is_prompting),
     }
 
@@ -445,8 +443,6 @@ def probes_attr(cfg, attr: str, force: bool = False) -> None:
             stability["A_vector_cosines"] = stability_probe.vector_cosines(vecs)
         # trained: cross-seed subspace overlap
         if len(trained_names) >= 2:
-            import numpy as np
-
             flats = {}
             for name in trained_names:
                 st = Steerer.load(trained_dir / f"{name}.npz")
