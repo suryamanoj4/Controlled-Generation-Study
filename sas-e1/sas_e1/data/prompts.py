@@ -34,16 +34,59 @@ TEMPLATES = [
     "Write a brief story about {topic}.",
 ]
 
+# E1b — Indic replication prompts (constructed, style-free). Written in-language because
+# BLOOMZ is instruction-tuned multilingually.
+HINDI_TOPICS = [
+    "एक चालाक लोमड़ी और कौआ", "खोई हुई चाबी", "रेल की यात्रा", "पुरानी घड़ी",
+    "बारिश के दिन का बाज़ार", "एक गाँव का कुआँ", "दो पड़ोसी और बाड़", "देर से पहुँची चिट्ठी",
+    "सर्दियों का बगीचा", "छेद वाली नाव", "नाविक और चाँद", "एक बूढ़ा पुस्तकालय",
+    "जादुई बाँसुरी", "चिड़िया का गीत", "बर्फ़ीली सुबह", "मेले का दिन",
+    "अनोखा बीज", "पहाड़ी रास्ता", "राजा और दर्जी", "खिड़की पर दीया",
+    "छोटा बगीचा", "समुद्र किनारे घर", "एक सपना", "बाज़ार में भीड़",
+    "बंदर और दर्पण", "गुम हुई घंटी", "अंतहीन सड़क", "दो घड़ियाँ",
+    "मछुआरा और सुनहरी मछली", "प्यासा कौआ", "सूरज और बादल", "छोटी नदी",
+    "जंगल की आग", "किसान और वर्षा", "मिट्टी का घड़ा", "कागज़ की नाव",
+    "अंधेरी गुफा", "चाँद की रोशनी", "नन्हा सितारा", "बहुत पुराना पेड़",
+]
+HINDI_TEMPLATES = [
+    "{topic} पर एक छोटी कहानी लिखिए।",
+    "{topic} के बारे में एक छोटी कथा सुनाइए।",
+    "{topic} पर एक लघु कहानी लिखिए।",
+]
 
-def neutral_prompts(n: int = 60, seed: int = 0) -> list[str]:
+TELUGU_TOPICS = [
+    "ఒక తెలివైన నక్క, కాకి", "పోయిన తాళం చెవి", "రైలు ప్రయాణం", "పాత గడియారం",
+    "వర్షం రోజు సంత", "ఊరి బావి", "ఇద్దరు పొరుగువారు", "ఆలస్యంగా వచ్చిన ఉత్తరం",
+    "చలికాలం తోట", "రంధ్రం ఉన్న పడవ", "పడవ వాడు, చంద్రుడు", "పాత గ్రంథాలయం",
+    "మంత్రమైన వేణువు", "పక్షి పాట", "మంచు ఉదయం", "జాతర రోజు",
+    "అద్భుత విత్తనం", "కొండ దారి", "రాజు, దర్జీ", "కిటికీలో దీపం",
+    "చిన్న తోట", "సముద్ర తీర ఇల్లు", "ఒక కల", "సంతలో రద్దీ",
+    "కోతి, అద్దం", "కనిపించని గంట", "అంతులేని బాట", "రెండు గడియారాలు",
+    "జాలరి, బంగారు చేప", "దాహం వేసిన కాకి", "సూర్యుడు, మేఘాలు", "చిన్న నది",
+    "అడవి అగ్ని", "రైతు, వర్షం", "మట్టి కుండ", "కాగితం పడవ",
+    "చీకటి గుహ", "చంద్రుని వెలుగు", "చిన్న నక్షత్రం", "చాలా పాత చెట్టు",
+]
+TELUGU_TEMPLATES = [
+    "{topic} గురించి ఒక చిన్న కథ రాయండి.",
+    "{topic} గురించి ఒక చిన్న కథ చెప్పండి.",
+    "{topic} ఒక చిన్న కథ రాయండి.",
+]
+
+
+def neutral_prompts(n: int = 60, seed: int = 0, language: str = "en") -> list[str]:
+    if language == "hi":
+        topics, templates = list(HINDI_TOPICS), HINDI_TEMPLATES
+    elif language in ("te", "telugu"):
+        topics, templates = list(TELUGU_TOPICS), TELUGU_TEMPLATES
+    else:
+        topics, templates = list(TOPICS), TEMPLATES
     rng = random.Random(seed)
-    topics = list(TOPICS)
     rng.shuffle(topics)
     prompts = []
     i = 0
     while len(prompts) < n:
         topic = topics[i % len(topics)]
-        template = TEMPLATES[(i // len(topics)) % len(TEMPLATES)]
+        template = templates[(i // len(topics)) % len(templates)]
         prompts.append(template.format(topic=topic))
         i += 1
     return prompts[:n]

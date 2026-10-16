@@ -1,11 +1,12 @@
 # SAS Experiment 1 — Representation Complexity Study (Design)
 
-> **Status:** v1.2 — lean Colab/Kaggle budget · dataset licensing locked (2026-10-13) · implementation-ready
+> **Status:** v1.3 — lean budget · dataset licensing locked · E1b Indic replication (2026-10-16) · implementation-ready
 > **Parent:** [[Style Adapter Steering — Model-Agnostic Narrative Style Control]]
 > **Companion research:** `SAS E1 — Prior Work Research (Steering Complexity).md`
 > **v1.0 changes vs v0.1:** effect-based complexity promoted to primary and parameter spectra require canonicalization (W2T); closed-form covariance-matching arm made a core falsification test (Representation Surgery/conceptors precedent); prompting baseline made mandatory (AxBench); ladder re-framed as falsifiable (refusal is documented rank-1); judge style-bias protocol added; seed/stability requirements raised; sample-size curve and separation pre-screen added; citation corrections to the parent proposal recorded in §11.
 > **v1.1 change (2026-10-13):** default execution mode is now **Lean** — 4 attributes, closed-form rank sweep + one trained low-rank arm fitted on cached activations, single T4-class session ≤3 h. The full grid is retained as **Extended** (§2.2) and deferred. No end-to-end training is required in Lean.
 > **v1.2 change (2026-10-13):** dataset licensing audit applied (§4.1) — toxicity primary switched to **Civil Comments (CC0-1.0)**; fable contrast and neutral probe pinned to **Wikipedia** (CC-BY-SA-3.0), with CNN/DailyMail (Apache-2.0) optional; CC-News dropped (404 / license unknown). No Lean dependency is gated or license-unknown.
+> **v1.3 change (2026-10-16):** Chandamama removed from scope entirely; **E1b Indic replication** added (§4.1b) — authentic Wikisource author corpora (Hindi: Premchand vs Prasad; Telugu: Gurajada vs Veeresalingam) + permissively licensed sentiment sets; new config `configs/lean-indic.yaml`; in-language prompts and a multilingual classifier override.
 
 ---
 
@@ -210,9 +211,24 @@ Optional Lean variant: **ToxiGen** (`toxigen/toxigen-data`) as a secondary impli
 | L1 | Formality | GYAFC informal | GYAFC formal | neutral prompts | request-gated (email); fallback: constructed news-vs-social |
 | L2 | Refusal | CAA-style synthetic harmful/comply pairs | harmless/comply pairs | AdvBench (MIT) + XSTest (CC-BY-4.0) | synthetic; no gate |
 | — | Truthfulness (stretch) | TruthfulQA true claims (`truthfulqa/truthful_qa`) | false claims | TruthfulQA generation | Apache-2.0; ungated |
-| Post-E1 | Chandamama | `swechatelangana/chandamama-kathalu` | Telugu Wikipedia / mC4-te | Telugu prompts | manually gated; **CC-BY-NC-SA-4.0** (non-commercial) |
 
 **Lean = 4 attributes**: one per level plus a second L3; formality, refusal, and truthfulness move to Extended. No Lean dependency is gated or license-unknown.
+
+### 4.1b E1b — Indic replication (Hindi + Telugu)
+
+Confirms the same pattern outside English using **authentic, public-domain author corpora** (no synthetic stories). Same model (BLOOMZ-1B7), same layer, same steering families, probes, and α calibration. Config: `configs/lean-indic.yaml`, run name `indic`.
+
+| Level | Attribute | Hindi | Telugu | License / access |
+|---|---|---|---|---|
+| L1 | Sentiment | `iam-tsr/hindi-sentiments` (MIT) — pos vs neg | `mounikaiiith/Telugu_Sentiment` (CC-BY-4.0) — pos vs neg | both ungated |
+| L3 | Author style | Premchand vs Jaishankar Prasad (hi Wikisource) | Gurajada Apparao vs Kandukuri Veeresalingam (te Wikisource) | public-domain texts; MediaWiki API |
+
+- Instrument: sentiment uses `xlm-roberta-base` + LR (per-attribute `classifier_model` override); story register uses per-language char n-gram TF-IDF.
+- Prompts: constructed in-language neutral story prompts (40 per attribute).
+- Confirmatory question per language: `H(story) > H(sentiment)` (the G1 analog) plus the `r*` behavior.
+- Telugu is reported as **secondary**: BLOOM tokenizer fertility for Telugu is poor (itself a quantity of interest for E2); Hindi is the primary replication.
+- Budget: +4 attribute runs ≈ +60–90 min GPU; run as a separate session (`download_assets.py` then `run_experiment.py` with `configs/lean-indic.yaml`).
+- Provenance: Wikisource page caches live under `data/raw/wikisource/<corpus>/`; combined corpora under `data/processed/wikisource_*.jsonl`.
 
 **Single-dimension contrast audit:** for every attribute, a held-out classifier test confirms the pair differs primarily on the target attribute (e.g., formality pairs do not smuggle in sentiment). Report audit accuracy.
 

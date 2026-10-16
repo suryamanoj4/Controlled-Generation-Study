@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import time
+from html.parser import HTMLParser
 from pathlib import Path
 
 from ..config import get
@@ -136,16 +137,34 @@ def strip_gutenberg(text: str) -> str:
     return text.strip()
 
 
-def _chunk_by_paragraphs(text: str, target_words: int = 150) -> list[str]:
-    """Split a play into stable ~target-word documents (paragraph blocks)."""
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if len(p.strip().split()) >= 20]
-    docs, buf, count = [], [], 0
+def _chunk_by_paragraphs(text: str, target_words: int = 150, min_words: int = 20) -> list[str]:
+    """Split text into stable ~target-word documents (paragraph/sentence aware)."""
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    units: list[str] = []
     for para in paragraphs:
-        words = len(para.split())
+        if len(para.split()) <= int(target_words * 1.6):
+            if len(para.split()) >= min_words:
+                units.append(para)
+            continue
+        # long paragraph: split on sentence boundaries (incl. Devanagari danda)
+        sentences = re.split(r"(?<=[।॥.!?])\s+", para)
+        buf: list[str] = []
+        for sent in sentences:
+            buf.append(sent)
+            if len(" ".join(buf).split()) >= target_words:
+                units.append(" ".join(buf))
+                buf = []
+        if buf and len(" ".join(buf).split()) >= min_words:
+            units.append(" ".join(buf))
+
+    docs: list[str] = []
+    buf, count = [], 0
+    for unit in units:
+        words = len(unit.split())
         if count + words > target_words and buf:
             docs.append("\n\n".join(buf))
             buf, count = [], 0
-        buf.append(para)
+        buf.append(unit)
         count += words
     if buf:
         docs.append("\n\n".join(buf))
@@ -377,6 +396,252 @@ def prepare_toxigen(cfg, force: bool = False) -> dict:
     return {"n_pos": len(pos), "n_neg": len(neg)}
 
 
+# ---------------------------------------------------------------- Indic corpora
+
+# Authentic, public-domain author corpora fetched from Wikisource via the MediaWiki API
+# (E1b replication: same author-style design as the English Shakespeare leg).
+# Authors died 1915-1937, so texts are public domain; Wikisource API use requires a UA.
+WIKISOURCE_UA = {"User-Agent": "sas-e1-corpus-fetcher/0.1 (research; contact: surya)"}
+WIKISOURCE_AUTHORS = {
+    "wikisource_premchand": {
+        "site": "https://hi.wikisource.org",
+        "author": "Premchand",
+        "prefixes": ["प्रेमचंद की सर्वश्रेष्ठ कहानियां/", "प्रेमचंद रचनावली (खण्ड ५)/"],
+    },
+    "wikisource_prasad": {
+        "site": "https://hi.wikisource.org",
+        "author": "Jaishankar Prasad",
+        "prefixes": ["जयशंकर प्रसाद की श्रेष्ठ कहानियां/", "तितली/"],
+    },
+    "wikisource_gurajada": {
+        "site": "https://te.wikisource.org",
+        "author": "Gurajada Apparao",
+        "prefixes": ["కన్యాశుల్కము/", "గురజాడలు/కథానికలు/", "గురుజాడలు/కవితలు/"],
+    },
+    "wikisource_veeresalingam": {
+        "site": "https://te.wikisource.org",
+        "author": "Kandukuri Veeresalingam",
+        "prefixes": ["రాజశేఖర చరిత్రము (ఎమెస్కో)/", "కందుకూరి వీరేశలింగకృత గ్రంథములు/"],
+    },
+}
+
+
+class _HtmlTextExtractor(HTMLParser):
+    """Visible-text extraction (stdlib HTMLParser; ignores script/style/template)."""
+
+    SKIP = {"script", "style", "template", "noscript"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._skip = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.SKIP:
+            self._skip += 1
+        if tag in ("p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4"):
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag):
+        if tag in self.SKIP and self._skip:
+            self._skip -= 1
+
+    def handle_data(self, data):
+        if not self._skip:
+            self.parts.append(data)
+
+    def text(self) -> str:
+        import html as _html
+
+        out = _html.unescape("".join(self.parts))
+        out = re.sub(r"[ \t]+", " ", out)
+        out = re.sub(r"\n\s*\n+", "\n\n", out)
+        return out.strip()
+
+
+def _ws_get_json(site: str, params: dict, attempts: int = 3) -> dict:
+    """Polite MediaWiki API call: maxlag, Retry-After aware, exponential backoff."""
+    import requests
+
+    params = {**params, "format": "json", "maxlag": 5}
+    for attempt in range(attempts):
+        try:
+            resp = requests.get(f"{site}/w/api.php", params=params, headers=WIKISOURCE_UA, timeout=60)
+            if resp.status_code in (429, 503):
+                wait = float(resp.headers.get("Retry-After") or 0) or min(5.0 * (2 ** attempt), 30.0)
+                print(f"[wikisource] throttled ({resp.status_code}); sleeping {wait:.0f}s")
+                time.sleep(wait)
+                continue
+            if resp.status_code == 403:
+                wait = float(resp.headers.get("Retry-After") or 0) or min(15.0 * (attempt + 1), 45.0)
+                print(f"[wikisource] 403 (site throttling); sleeping {wait:.0f}s")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            print(f"[wikisource] API failed ({attempt + 1}/{attempts}): {exc}")
+            if attempt < attempts - 1:
+                time.sleep(min(5.0 * (2 ** attempt), 30.0))
+    return {}
+
+
+def _ws_allpages(site: str, prefix: str, limit: int = 500) -> list[str]:
+    data = _ws_get_json(site, {"action": "query", "list": "allpages", "apprefix": prefix,
+                               "aplimit": limit})
+    return [p["title"] for p in data.get("query", {}).get("allpages", [])]
+
+
+def _ws_parse_page(site: str, title: str) -> str:
+    data = _ws_get_json(site, {"action": "parse", "page": title, "prop": "text",
+                               "formatversion": "2"})
+    html_text = data.get("parse", {}).get("text", "")
+    if not html_text:
+        return ""
+    extractor = _HtmlTextExtractor()
+    extractor.feed(html_text)
+    return extractor.text()
+
+
+def _clean_wikisource(text: str) -> str:
+    """Drop navigation/page-number noise while preserving paragraph structure."""
+    out: list[str] = []
+    for raw in text.splitlines():
+        s = raw.strip()
+        if not s:
+            if out and out[-1] != "":
+                out.append("")
+            continue
+        if re.fullmatch(r"[←→\s\-–—·•|<>{}\[\]()]+", s):
+            continue
+        if re.fullmatch(r"\d{2,}", s):
+            continue
+        s = re.sub(r"^\d{3,}(?=\S)", "", s)  # page id glued to a title
+        if len(s.split()) < 4 and any(k in s for k in ("రచించినవారు", "द्वारा", "(19", "(20")):
+            continue
+        out.append(s)
+    return "\n".join(out)
+
+
+def _load_or_fetch_wikisource_author(cfg, corpus_name: str, force: bool = False) -> tuple[list[dict], dict]:
+    spec = WIKISOURCE_AUTHORS[corpus_name]
+    site = spec["site"]
+    raw_dir = ensure_dir(Path(get(cfg, "paths.data_raw", "data/raw")) / "wikisource" / corpus_name)
+    out_path = Path(get(cfg, "paths.data_processed", "data/processed")) / f"{corpus_name}.jsonl"
+
+    # always enumerate: per-page cache means re-runs only fetch pages still missing
+    titles: list[str] = []
+    sleep = float(get(cfg, "download.wikisource_sleep", 1.0))
+    for prefix in spec["prefixes"]:
+        found = _ws_allpages(site, prefix)
+        titles.extend(t for t in found if t not in titles)
+        time.sleep(sleep)
+    if not titles:
+        print(f"[wikisource] {corpus_name}: no pages found — check prefixes")
+        return [], {"author": spec["author"], "status": "no_pages"}
+
+    rows: list[dict] = []
+    fetched = 0
+    consecutive_failures = 0
+    for idx, title in enumerate(titles):
+        safe = re.sub(r"[^\w\-.]+", "_", title)[:120].strip("_") or "page"
+        cache_path = raw_dir / f"{safe}.txt"
+        if cache_path.exists() and not force:
+            text = cache_path.read_text(encoding="utf-8")
+        else:
+            text = _clean_wikisource(_ws_parse_page(site, title))
+            if text:
+                cache_path.write_text(text, encoding="utf-8")
+            time.sleep(sleep)
+        if not text or len(text.split()) < 40:
+            consecutive_failures += 1
+            if consecutive_failures >= 8:
+                print(f"[wikisource] {corpus_name}: too many consecutive failures — "
+                      "site likely throttling; will resume next run")
+                break
+            continue
+        consecutive_failures = 0
+        fetched += 1
+        docs = _chunk_by_paragraphs(text)
+        rows.extend({"text": d, "source": f"{spec['author']} — {title}", "label": None} for d in docs)
+        if (idx + 1) % 10 == 0:
+            print(f"[wikisource] {corpus_name}: {idx + 1}/{len(titles)} pages, {len(rows)} docs so far")
+    if rows:
+        write_jsonl(out_path, rows)
+    else:
+        print(f"[wikisource] {corpus_name}: no usable text — will retry next run")
+    print(f"[wikisource] {corpus_name}: {fetched}/{len(titles)} pages -> {len(rows)} docs")
+    return rows, {"author": spec["author"], "pages": len(titles), "fetched": fetched,
+                  "n_docs": len(rows), "status": "fetched" if rows else "empty"}
+
+
+def prepare_wikisource(cfg, force: bool = False) -> dict:
+    referenced = _referenced_corpora(cfg)
+    results = {}
+    for name in WIKISOURCE_AUTHORS:
+        if name in referenced:
+            _, info = _load_or_fetch_wikisource_author(cfg, name, force)
+            results[name] = info
+    return results
+
+
+def prepare_indic_sentiment(cfg, lang: str, force: bool = False) -> dict:
+    """Hindi / Telugu sentiment pools (permissively licensed; ungated)."""
+    import pandas as pd
+    from huggingface_hub import hf_hub_download
+
+    out_dir = ensure_dir(Path(get(cfg, "paths.data_processed", "data/processed")))
+    pos_path = out_dir / f"{'hindi' if lang == 'hi' else 'telugu'}_sent_positive.jsonl"
+    neg_path = out_dir / f"{'hindi' if lang == 'hi' else 'telugu'}_sent_negative.jsonl"
+    if (pos_path.exists() and neg_path.exists() and not force
+            and pos_path.stat().st_size > 1000 and neg_path.stat().st_size > 1000):
+        print(f"[{lang}_sentiment] cached")
+        return {"skipped": True}
+
+    cap = int(get(cfg, "download.n_indic_sent", 8000))
+    if lang == "hi":
+        path = hf_hub_download("iam-tsr/hindi-sentiments", "indic_sentiment_data.csv", repo_type="dataset")
+        df = pd.read_csv(path)
+        text_col, label_col = "hindi_text", "label"
+        labels = df[label_col]
+        pos = df.loc[labels == 1, text_col].astype(str).tolist()
+        neg = df.loc[labels == 2, text_col].astype(str).tolist()
+    else:
+        frames = []
+        for fname in ("Sentiment_train.csv", "Sentiment_valid .csv"):
+            try:
+                p = hf_hub_download("mounikaiiith/Telugu_Sentiment", fname, repo_type="dataset")
+                frames.append(pd.read_csv(p))
+            except Exception as exc:
+                print(f"[te_sentiment] skipped {fname}: {exc}")
+        df = pd.concat(frames, ignore_index=True)
+        sent = df["Sentiment"].astype(str).str.strip().str.lower()
+        pos = df.loc[sent.isin({"pos", "positive"}), "Sentence"].astype(str).tolist()
+        neg = df.loc[sent.isin({"neg", "negative"}), "Sentence"].astype(str).tolist()
+
+    import random
+
+    for rows, path, label in ((pos, pos_path, 1), (neg, neg_path, 0)):
+        random.Random(0).shuffle(rows)
+        write_jsonl(path, [{"text": t, "source": f"{lang}_sentiment", "label": label}
+                           for t in rows[:cap]])
+    print(f"[{lang}_sentiment] wrote {min(len(pos), cap)} pos, {min(len(neg), cap)} neg")
+    return {"n_pos": min(len(pos), cap), "n_neg": min(len(neg), cap)}
+
+
+def _referenced_corpora(cfg) -> set[str]:
+    referenced: set[str] = set()
+    if not hasattr(cfg, "attributes") or not cfg.attributes:
+        return referenced
+    for name in vars(cfg.attributes):
+        attr = getattr(cfg.attributes, name)
+        for field in ("positive", "contrast"):
+            value = getattr(attr, field, None)
+            if value:
+                referenced.add(str(value))
+    return referenced
+
+
 # ---------------------------------------------------------------- models + all
 
 def download_models(cfg) -> None:
@@ -399,19 +664,31 @@ def prepare_all(cfg, force: bool = False, include_toxigen: bool = False) -> dict
             "civil_comments": {"hf": "google/civil_comments", "license": "CC0-1.0"},
             "wikipedia": {"hf": "wikimedia/wikipedia", "license": "CC-BY-SA-3.0 + GFDL"},
             "moral_stories": {"hf": "demelin/moral_stories", "license": "MIT"},
-            "gutenberg": {"web": "project Gutenberg (gutendex)", "license": "US public domain"},
+            "gutenberg": {"web": "Project Gutenberg (pinned ids)", "license": "US public domain"},
+            "wikisource": {"web": "hi/te Wikisource (MediaWiki API)", "license": "public-domain texts"},
+            "hindi_sent": {"hf": "iam-tsr/hindi-sentiments", "license": "MIT"},
+            "telugu_sent": {"hf": "mounikaiiith/Telugu_Sentiment", "license": "CC-BY-4.0"},
             "toxigen": {"hf": "toxigen/toxigen-data", "license": "MIT + CDLA-Permissive (research note)"},
         },
         "results": {},
     }
-    manifest["results"]["sst2"] = prepare_sst2(cfg, force)
-    manifest["results"]["civil_comments"] = prepare_civil_comments(cfg, force)
+    ref = _referenced_corpora(cfg)
+    if ref & {"sst2_positive", "sst2_negative"}:
+        manifest["results"]["sst2"] = prepare_sst2(cfg, force)
+    if ref & {"civil_toxic", "civil_benign"}:
+        manifest["results"]["civil_comments"] = prepare_civil_comments(cfg, force)
+    # Wikipedia provides the neutral probe corpus for every attribute plus the fable contrast
     manifest["results"]["wikipedia"] = prepare_wikipedia(cfg, force)
-    manifest["results"]["moral_stories"] = prepare_moral_stories(cfg, force)
-
-    attrs = list(vars(cfg.attributes)) if hasattr(cfg, "attributes") and cfg.attributes else []
-    if "shakespeare" in attrs:
+    if "moral_stories" in ref:
+        manifest["results"]["moral_stories"] = prepare_moral_stories(cfg, force)
+    if ref & {"shakespeare", "early_modern_drama"}:
         manifest["results"]["gutenberg"] = prepare_gutenberg(cfg, force)
+    if ref & set(WIKISOURCE_AUTHORS):
+        manifest["results"]["wikisource"] = prepare_wikisource(cfg, force)
+    if ref & {"hindi_sent_positive", "hindi_sent_negative"}:
+        manifest["results"]["hindi_sent"] = prepare_indic_sentiment(cfg, "hi", force)
+    if ref & {"telugu_sent_positive", "telugu_sent_negative"}:
+        manifest["results"]["telugu_sent"] = prepare_indic_sentiment(cfg, "te", force)
     if include_toxigen:
         manifest["results"]["toxigen"] = prepare_toxigen(cfg, force)
 

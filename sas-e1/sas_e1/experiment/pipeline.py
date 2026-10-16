@@ -266,8 +266,11 @@ def _build_classifier(cfg, attr: str, device):
     texts = train_pos + train_neg
     labels = [1] * len(train_pos) + [0] * len(train_neg)
     if kind in ("sentiment", "toxicity"):
+        encoder = getattr(getattr(cfg.attributes, attr), "classifier_model", None) or str(
+            get(cfg, "evaluation.classifier.embedding_model", "distilbert-base-uncased")
+        )
         clf = EmbeddingLRClassifier(
-            encoder_name=str(get(cfg, "evaluation.classifier.embedding_model", "distilbert-base-uncased")),
+            encoder_name=str(encoder),
             max_length=int(get(cfg, "evaluation.classifier.max_length", 256)),
         )
     else:
@@ -293,7 +296,8 @@ def eval_attr(cfg, attr: str, model, tokenizer, device, force: bool = False) -> 
                                        "kind": getattr(cfg.attributes, attr).kind})
 
     n_prompts = int(get(cfg, "generation.prompts_per_attr", 60))
-    prompts = neutral_prompts(n_prompts, seed=int(get(cfg, "seed", 0)))
+    lang = str(getattr(getattr(cfg.attributes, attr), "language", "en") or "en")
+    prompts = neutral_prompts(n_prompts, seed=int(get(cfg, "seed", 0)), language=lang)
     gen_seeds = list(get(cfg, "generation.seeds", [0, 1]))
     arms = list(get(cfg, "generation.arms", ["A", "F16", "C1", "C4", "E", "R", "P"]))
     multipliers = list(get(cfg, "calibration.multipliers", [1.0]))
