@@ -229,6 +229,7 @@ Confirms the same pattern outside English using **authentic, public-domain autho
 - Telugu is reported as **secondary**: BLOOM tokenizer fertility for Telugu is poor (itself a quantity of interest for E2); Hindi is the primary replication.
 - Budget: +4 attribute runs ≈ +60–90 min GPU; run as a separate session (`download_assets.py` then `run_experiment.py` with `configs/lean-indic.yaml`).
 - Provenance: Wikisource page caches live under `data/raw/wikisource/<corpus>/`; combined corpora under `data/processed/wikisource_*.jsonl`.
+- Corpus sizes after fetch (150-word chunks): Hindi 1638 (Premchand) / 1002 (Prasad); Telugu 177 (Gurajada) / 678 (Veeresalingam). The Telugu leg is matched down to Gurajada's volume (~177 docs) — treat it as a **small-n replication**, with Hindi as the primary Indic test.
 
 **Single-dimension contrast audit:** for every attribute, a held-out classifier test confirms the pair differs primarily on the target attribute (e.g., formality pairs do not smuggle in sentiment). Report audit accuracy.
 
