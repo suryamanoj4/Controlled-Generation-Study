@@ -1,7 +1,8 @@
 # SAS-E1 — Representation Complexity Study (code)
 
 Implementation of **Experiment 1** from the SAS design doc
-(`Obsidian Vault/AI Research/SAS E1 — Complexity Study Design.md`, v1.2, Lean mode).
+(`Obsidian Vault/AI Research/SAS E1 — Complexity Study Design.md`, v1.3, Lean mode,
+including the **E1b Indic replication**).
 
 The study asks three questions in one harness:
 
@@ -64,6 +65,19 @@ bash scripts/setup.sh configs/pilot.yaml
 uv run python scripts/run_experiment.py --config configs/pilot.yaml --stage all
 ```
 
+### E1b — Indic replication (Hindi + Telugu)
+
+Uses authentic, public-domain author corpora (hi/te Wikisource) plus permissively licensed
+sentiment sets; same model, layer, steering families, probes and gates as the English run.
+
+```bash
+bash scripts/setup.sh configs/lean-indic.yaml        # sentiment + Wikisource + wiki neutral
+uv run python scripts/run_experiment.py --config configs/lean-indic.yaml --stage all
+```
+
+Run it as a **separate session** after the English Lean run (~+60–90 min GPU). Telugu is a
+small-n replication (Gurajada's corpus is thin); Hindi is the primary Indic test.
+
 No-GPU smoke test of the math (numpy + pyyaml only, ephemeral env):
 
 ```bash
@@ -75,12 +89,13 @@ uv run --with numpy --with pyyaml python scripts/smoke_test.py
 - Model: `bigscience/bloomz-1b7` (fp16, T4 16 GB safe) or `bigscience/bloomz-560m` (pilot).
 - Budget target: ~1.5–2 h GPU (extraction ~15 min, cached-activation fits ~5 min,
   generation ~40–60 min, metrics ~10 min).
+- E1b Indic: same model, **+60–90 min** as a separate session (4 attributes).
 - Trained arms fit **on cached activations only** — no backprop through the base model.
 
 ## Layout
 
 ```
-configs/            lean + pilot experiment configs
+configs/            lean + pilot + Indic (lean-indic) experiment configs
 sas_e1/
   config.py         dotted-access config loader
   utils.py          metrics helpers (entropy, MTLD, IO, done-markers)
@@ -97,7 +112,7 @@ tests/              unit tests for operators and metrics
 Artifacts land in `artifacts/<run_name>/<attribute>/<stage>/`. Raw prepared corpora land in
 `data/processed/` as JSONL with a `manifest.json` recording sources, counts and licenses.
 
-## Licensing / sources (verified 2026-10-13)
+## Licensing / sources (verified 2026-10-16)
 
 | Role | Source | License |
 |---|---|---|
@@ -108,5 +123,8 @@ Artifacts land in `artifacts/<run_name>/<attribute>/<stage>/`. Raw prepared corp
 | Fable | `demelin/moral_stories` | MIT |
 | Wikipedia contrast / neutral probe | `wikimedia/wikipedia` | CC-BY-SA-3.0 + GFDL (attribution required) |
 | Optional implicit toxicity | `toxigen/toxigen-data` | MIT + CDLA-Permissive (research-use note) |
+| Hindi sentiment (E1b) | `iam-tsr/hindi-sentiments` | MIT, ungated |
+| Telugu sentiment (E1b) | `mounikaiiith/Telugu_Sentiment` | CC-BY-4.0, ungated |
+| Indic author styles (E1b) | hi/te Wikisource — Premchand vs Prasad; Gurajada vs Veeresalingam | public-domain texts; MediaWiki API |
 
-See the design doc §4.1 for the full rationale and the Extended (deferred) list.
+See the design doc §4.1–§4.1b for the full rationale, corpus sizes, and the Extended (deferred) list.
