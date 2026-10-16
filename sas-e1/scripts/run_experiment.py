@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Run SAS-E1 stages (resumable): extract | fit | eval | probes | analyze | all."""
+import os
 import pathlib
 import sys
 
@@ -9,3 +10,6 @@ from sas_e1.cli import main  # noqa: E402
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)

@@ -316,6 +316,10 @@ def prepare_wikipedia(cfg, force: bool = False) -> dict:
             break
     if len(docs) < need:
         print(f"[wikipedia] WARNING: {len(docs)} docs < {need} requested")
+    del ds  # best-effort: release the streaming iterator at end of use
+    import gc
+
+    gc.collect()
     neutral = docs[:n_neutral]
     contrast = docs[n_neutral:]
     write_jsonl(neutral_path, neutral)
