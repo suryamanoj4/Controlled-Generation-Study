@@ -231,7 +231,7 @@ Confirms the same pattern outside English using **authentic, public-domain autho
 - Telugu is reported as **secondary**: BLOOM tokenizer fertility for Telugu is poor (itself a quantity of interest for E2); Hindi is the primary replication.
 - Budget: the 4 Indic attributes are part of the same Lean run (~+60–90 min on bf16; fp32-only GPUs slower).
 - Provenance: Wikisource page caches live under `data/raw/wikisource/<corpus>/`; combined corpora under `data/processed/wikisource_*.jsonl`.
-- Corpus sizes after fetch (150-word chunks): Hindi 1638 (Premchand) / 1002 (Prasad); Telugu 177 (Gurajada) / 678 (Veeresalingam). The Telugu leg is matched down to Gurajada's volume (~177 docs) — treat it as a **small-n replication**, with Hindi as the primary Indic test.
+- **Uniform L3 author budget: 200 docs/author** (pool 130 + classifier 45/25 per side; matching equalizes within each pair). Gurajada caps at 177 → the Telugu pair matches at ~150–170. Hindi remains the primary Indic test; Indic L3 entropy estimates are correspondingly noisier — the English ladder carries the complexity claim.
 
 **Single-dimension contrast audit:** for every attribute, a held-out classifier test confirms the pair differs primarily on the target attribute (e.g., formality pairs do not smuggle in sentiment). Report audit accuracy.
 

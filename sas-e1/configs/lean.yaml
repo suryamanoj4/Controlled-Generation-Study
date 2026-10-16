@@ -82,10 +82,12 @@ attributes:
     positive: wikisource_premchand
     contrast: wikisource_prasad
     language: hi
-    n_stat_docs: 400
-    n_fit_docs: 150
-    n_clf_train: 120
-    n_clf_eval: 80
+    # uniform L3 author budget: 200 docs/author (pool 130 + 45/25 classifier)
+    n_pool_docs: 130
+    n_stat_docs: 120
+    n_fit_docs: 100
+    n_clf_train: 45
+    n_clf_eval: 25
   sentiment_te:
     level: L1
     kind: sentiment
@@ -103,10 +105,12 @@ attributes:
     positive: wikisource_gurajada
     contrast: wikisource_veeresalingam
     language: te
-    n_stat_docs: 400
-    n_fit_docs: 150
-    n_clf_train: 80
-    n_clf_eval: 50
+    # uniform L3 author budget: 200 docs/author (pool 130 + 45/25 classifier)
+    n_pool_docs: 130
+    n_stat_docs: 120
+    n_fit_docs: 100
+    n_clf_train: 45
+    n_clf_eval: 25
 
 generation:
   prompts_per_attr: 40

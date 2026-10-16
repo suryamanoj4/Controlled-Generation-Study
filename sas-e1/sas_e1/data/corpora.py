@@ -225,7 +225,7 @@ def attribute_corpora(cfg, attr_key: str, tokenizer, seed: int | None = None) ->
     n_fit = int(getattr(attr, "n_fit_docs", None) or get(cfg, "steering.n_fit_docs", 400))
     n_clf_train = int(getattr(attr, "n_clf_train", None) or get(cfg, "evaluation.classifier.n_clf_train", 1500))
     n_clf_eval = int(getattr(attr, "n_clf_eval", None) or get(cfg, "evaluation.classifier.n_clf_eval", 800))
-    n_pool = max(3 * n_stat, n_stat + 600)
+    n_pool = int(getattr(attr, "n_pool_docs", None) or max(3 * n_stat, n_stat + 600))
 
     splitter = split_pool_by_source if attr_key == "shakespeare" else split_pool
     splits = splitter(pos, neg, n_pool, n_clf_train, n_clf_eval, seed=seed)

@@ -86,7 +86,9 @@ uv run python scripts/run_experiment.py --config configs/lean.yaml \
   --attr sentiment_hi,story_hi,sentiment_te,story_te --stage all
 ```
 
-Telugu is a small-n replication (Gurajada's corpus is thin); Hindi is the primary Indic test.
+The Indic L3 author corpora use a uniform **200-doc budget per author** (pool 130 + 45/25
+classifier); Gurajada caps at 177, so the Telugu pair matches at ~150–170. Telugu remains a
+small-n replication; Hindi is the primary Indic test.
 
 No-GPU smoke test of the math (numpy + pyyaml only, ephemeral env):
 

@@ -697,7 +697,7 @@ def _corpus_target_docs(cfg, corpus_name: str, margin: float = 1.15) -> int | No
         n_stat = int(getattr(attr, "n_stat_docs", None) or get(cfg, "steering.n_stat_docs", 2000))
         n_clf_train = int(getattr(attr, "n_clf_train", None) or get(cfg, "evaluation.classifier.n_clf_train", 1500))
         n_clf_eval = int(getattr(attr, "n_clf_eval", None) or get(cfg, "evaluation.classifier.n_clf_eval", 800))
-        n_pool = max(3 * n_stat, n_stat + 600)
+        n_pool = int(getattr(attr, "n_pool_docs", None) or max(3 * n_stat, n_stat + 600))
         needs.append(n_pool + n_clf_train + n_clf_eval)
     if not needs:
         return None
