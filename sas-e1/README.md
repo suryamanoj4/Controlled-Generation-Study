@@ -45,6 +45,11 @@ python scripts/download_assets.py --config configs/lean.yaml
 
 `scripts/setup.sh` forwards the same flags after the config path.
 
+Downloads are target-driven: streaming datasets stop at their caps, and Gutenberg /
+Wikisource fetch works/pages in a **seeded random order**, stopping once the split's needs
+are met (so the setup fetches only what the experiment uses; change `seed` to vary which
+titles are covered).
+
 Without uv (legacy pip):
 
 ```bash

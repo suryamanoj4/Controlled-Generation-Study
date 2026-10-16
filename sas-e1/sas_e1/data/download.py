@@ -6,8 +6,10 @@ of the PG header/footer before writing.
 """
 from __future__ import annotations
 
+import random
 import re
 import time
+import zlib
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -216,16 +218,36 @@ def prepare_gutenberg(cfg, force: bool = False) -> dict:
     manifest_path = out_dir / "gutenberg_manifest.json"
     pos_path, neg_path = out_dir / "shakespeare.jsonl", out_dir / "early_modern_drama.jsonl"
     sleep = float(get(cfg, "download.gutenberg_sleep", 0.5))
+    raw_dir = Path(get(cfg, "paths.data_raw", "data/raw")) / "gutenberg"
+    rng = random.Random(int(get(cfg, "seed", 0)) + 17)
 
-    rows_pos, rows_neg, resolved = [], [], []
-    for work in GUTENBERG_WORKS:
-        rows, info = _load_or_fetch_work(cfg, work, sleep, force)
-        (rows_pos if work["group"] == "pos" else rows_neg).extend(rows)
-        resolved.append(info)
+    rows_by_group: dict[str, list[dict]] = {"pos": [], "neg": []}
+    resolved: list[dict] = []
+    skipped_works: list[str] = []
+    for group, corpus_name in (("pos", "shakespeare"), ("neg", "early_modern_drama")):
+        works = [w for w in GUTENBERG_WORKS if w["group"] == group]
+        rng.shuffle(works)  # seeded random order: title coverage varies with seed
+        target = _corpus_target_docs(cfg, corpus_name)
+        processed = 0
+        for work in works:
+            cached = (raw_dir / f"{work['key']}.jsonl").exists()
+            if (not cached and target is not None
+                    and len(rows_by_group[group]) >= target and processed >= 5):
+                skipped_works.append(work["key"])
+                continue
+            rows, info = _load_or_fetch_work(cfg, work, sleep, force)
+            if not str(info.get("status", "")).startswith("failed"):
+                processed += 1
+            rows_by_group[group].extend(rows)
+            resolved.append(info)
+        if skipped_works:
+            print(f"[gutenberg] {group}: target reached — skipped work(s): {', '.join(skipped_works)}")
+    rows_pos, rows_neg = rows_by_group["pos"], rows_by_group["neg"]
 
     write_jsonl(pos_path, rows_pos)
     write_jsonl(neg_path, rows_neg)
-    save_json(manifest_path, {"resolved": resolved, "n_pos": len(rows_pos), "n_neg": len(rows_neg)})
+    save_json(manifest_path, {"resolved": resolved, "skipped": skipped_works,
+                              "n_pos": len(rows_pos), "n_neg": len(rows_neg)})
     failed = [r["key"] for r in resolved if str(r.get("status", "")).startswith("failed")]
     if failed:
         print(f"[gutenberg] WARNING: {len(failed)} work(s) failed ({', '.join(failed)}) — re-run to retry")
@@ -546,13 +568,22 @@ def _load_or_fetch_wikisource_author(cfg, corpus_name: str, force: bool = False)
 
     rows: list[dict] = []
     fetched = 0
+    skipped = 0
     consecutive_failures = 0
+    # seeded random page order so title coverage varies with the run seed; stop fetching
+    # (uncached pages) once the split's target is met — cached pages are free and kept
+    rng = random.Random(int(get(cfg, "seed", 0)) + zlib.crc32(corpus_name.encode()) % 9973)
+    rng.shuffle(titles)
+    target = _corpus_target_docs(cfg, corpus_name)
     for idx, title in enumerate(titles):
         safe = re.sub(r"[^\w\-.]+", "_", title)[:120].strip("_") or "page"
         cache_path = raw_dir / f"{safe}.txt"
         if cache_path.exists() and not force:
             text = cache_path.read_text(encoding="utf-8")
         else:
+            if target is not None and len(rows) >= target and fetched >= 3:
+                skipped += 1
+                continue
             text = _clean_wikisource(_ws_parse_page(site, title))
             if text:
                 cache_path.write_text(text, encoding="utf-8")
@@ -574,9 +605,12 @@ def _load_or_fetch_wikisource_author(cfg, corpus_name: str, force: bool = False)
         write_jsonl(out_path, rows)
     else:
         print(f"[wikisource] {corpus_name}: no usable text — will retry next run")
+    if skipped:
+        print(f"[wikisource] {corpus_name}: target ({target}) reached — skipped {skipped} uncached page(s)")
     print(f"[wikisource] {corpus_name}: {fetched}/{len(titles)} pages -> {len(rows)} docs")
     return rows, {"author": spec["author"], "pages": len(titles), "fetched": fetched,
-                  "n_docs": len(rows), "status": "fetched" if rows else "empty"}
+                  "skipped": skipped, "target": target, "n_docs": len(rows),
+                  "status": "fetched" if rows else "empty"}
 
 
 def prepare_wikisource(cfg, force: bool = False) -> dict:
@@ -644,6 +678,30 @@ def _referenced_corpora(cfg) -> set[str]:
             if value:
                 referenced.add(str(value))
     return referenced
+
+
+def _corpus_target_docs(cfg, corpus_name: str, margin: float = 1.15) -> int | None:
+    """Docs this corpus needs for splitting (pool + classifier needs, plus margin).
+
+    Works/pages are fetched in a seeded random order and fetching stops once the
+    target is reached (cached items are always included for free). Returns None
+    when no attribute references the corpus.
+    """
+    needs: list[int] = []
+    if not hasattr(cfg, "attributes") or not cfg.attributes:
+        return None
+    for name in vars(cfg.attributes):
+        attr = getattr(cfg.attributes, name)
+        if corpus_name not in (getattr(attr, "positive", None), getattr(attr, "contrast", None)):
+            continue
+        n_stat = int(getattr(attr, "n_stat_docs", None) or get(cfg, "steering.n_stat_docs", 2000))
+        n_clf_train = int(getattr(attr, "n_clf_train", None) or get(cfg, "evaluation.classifier.n_clf_train", 1500))
+        n_clf_eval = int(getattr(attr, "n_clf_eval", None) or get(cfg, "evaluation.classifier.n_clf_eval", 800))
+        n_pool = max(3 * n_stat, n_stat + 600)
+        needs.append(n_pool + n_clf_train + n_clf_eval)
+    if not needs:
+        return None
+    return int(max(needs) * margin)
 
 
 # ---------------------------------------------------------------- models + all

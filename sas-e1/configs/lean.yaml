@@ -140,12 +140,12 @@ evaluation:
 
 download:
   n_sst_fit: 3000           # per class, steering pool (stat + fit + matching buffer)
-  n_sst_clf: 2000           # per class, classifier train (disjoint)
-  n_sst_eval: 1000          # per class, classifier eval / S_human (disjoint)
-  n_civil: 8000             # per class pool
-  n_wikipedia: 6000         # contrast pool (fable contrast + oversized buffer)
+  n_sst_clf: 900            # per class, classifier train (disjoint; split need = 4200/class)
+  n_sst_eval: 450           # per class, classifier eval / S_human (disjoint)
+  n_civil: 4500             # per class pool (split need = 4200/class)
+  n_wikipedia: 4500         # contrast pool (fable contrast; split need = 4200/side)
   n_wikipedia_neutral: 500  # held-out neutral probe corpus
-  n_moral: 6000
-  n_indic_sent: 6000        # per class, Hindi/Telugu sentiment pools
+  n_moral: 4500             # fable positive pool (split need = 4200/side)
+  n_indic_sent: 2200        # per class, Hindi/Telugu sentiment pools (split need = 1850/class)
   gutenberg_sleep: 0.5      # seconds between Gutendex calls
   wikisource_sleep: 1.0     # seconds between Wikisource API calls (politeness)
