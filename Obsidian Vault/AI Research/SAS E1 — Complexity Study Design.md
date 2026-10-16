@@ -1,12 +1,13 @@
 # SAS Experiment 1 — Representation Complexity Study (Design)
 
-> **Status:** v1.3 — lean budget · dataset licensing locked · E1b Indic replication (2026-10-16) · implementation-ready
+> **Status:** v1.4 — unified Lean run (EN + Indic) (2026-10-17) · implementation-ready
 > **Parent:** [[Style Adapter Steering — Model-Agnostic Narrative Style Control]]
 > **Companion research:** `SAS E1 — Prior Work Research (Steering Complexity).md`
 > **v1.0 changes vs v0.1:** effect-based complexity promoted to primary and parameter spectra require canonicalization (W2T); closed-form covariance-matching arm made a core falsification test (Representation Surgery/conceptors precedent); prompting baseline made mandatory (AxBench); ladder re-framed as falsifiable (refusal is documented rank-1); judge style-bias protocol added; seed/stability requirements raised; sample-size curve and separation pre-screen added; citation corrections to the parent proposal recorded in §11.
 > **v1.1 change (2026-10-13):** default execution mode is now **Lean** — 4 attributes, closed-form rank sweep + one trained low-rank arm fitted on cached activations, single T4-class session ≤3 h. The full grid is retained as **Extended** (§2.2) and deferred. No end-to-end training is required in Lean.
 > **v1.2 change (2026-10-13):** dataset licensing audit applied (§4.1) — toxicity primary switched to **Civil Comments (CC0-1.0)**; fable contrast and neutral probe pinned to **Wikipedia** (CC-BY-SA-3.0), with CNN/DailyMail (Apache-2.0) optional; CC-News dropped (404 / license unknown). No Lean dependency is gated or license-unknown.
 > **v1.3 change (2026-10-16):** Chandamama removed from scope entirely; **E1b Indic replication** added (§4.1b) — authentic Wikisource author corpora (Hindi: Premchand vs Prasad; Telugu: Gurajada vs Veeresalingam) + permissively licensed sentiment sets; new config `configs/lean-indic.yaml`; in-language prompts and a multilingual classifier override.
+> **v1.4 change (2026-10-17):** Indic attributes merged into the single `configs/lean.yaml` run — one setup, one run, no separate config; Lean is now **8 attributes**. Restrict with `--attr` when needed. (`configs/lean-indic.yaml` removed.)
 
 ---
 
@@ -69,7 +70,7 @@ h' = h + W h + b
 |---|---|---|
 | Steerer arm | Lean: A, F∞, F1/F4/F16, C1/C4, E, R, P · Extended: + A′, B, C16, D | see §3 |
 | Rank r | Lean: {1, 4, 16} + F∞ · Extended: {1, 2, 4, 8, 16, 32} | arms F (closed-form) and C (trained) |
-| Attribute | Lean: 4 across 3 levels (sentiment, toxicity, Shakespeare, fable) · Extended: 6–8 | §4.1 |
+| Attribute | Lean: 8 across 3 levels (EN: sentiment, toxicity, Shakespeare, fable; HI/TE: sentiment, author style) · Extended: +6–8 | §4.1 |
 | Layer | Lean: layer 12 (50%) only · Extended: {33%, 50%, 66%} descriptive | §3.8 |
 | Seed / resample | Lean: 2 seeds (trained) / 2 resamples (closed-form) · Extended: 5/5 | distributions reported, never best run |
 | Model | bloomz-1b7 primary (dtype `auto`: bf16 if supported, else fp32 — **never fp16** for BLOOM); bloomz-560m pilot; bloom-1b7 robustness in Extended | §2.3 |
@@ -78,14 +79,14 @@ h' = h + W h + b
 
 ### 2.2 Grids and budget
 
-**Lean (default) — one Colab/Kaggle GPU session, ≤3 h on a T4.**
+**Lean (default) — one Colab/Kaggle GPU session; 8 attributes (EN + Indic).**
 
 | Grid | Composition | Runs |
 |---|---|---|
-| Ladder (primary) | 4 attrs × closed-form {A, F∞, F1, F4, F16, E, R} × 2 resamples + trained {C1, C4} × 2 seeds | ~90 (mostly free) |
+| Ladder (primary) | 8 attrs × closed-form {A, F∞, F1, F4, F16, E, R} × 2 resamples + trained {C1, C4} × 2 seeds | ~180 (mostly free) |
 | Mini sample-size curve | {sentiment, Shakespeare} × sizes {16, 64, 256} × 3 resamples | 18 |
-| Generation eval | 4 attrs × 9 arms × 4 scale points {0.5, 1, 2, 4} × 40 prompts × 2 generation seeds ≈ 11k short generations | — |
-| **Compute** | extraction ~8 min + cached-activation fits ~5 min + generation ~30–45 min + metrics ~10 min | **~1–1.5 h GPU (bf16-capable; fp32-only GPUs ~2–3× slower)** |
+| Generation eval | 8 attrs × 9 arms × 4 scale points {0.5, 1, 2, 4} × 40 prompts × 2 generation seeds ≈ 22k short generations | — |
+| **Compute** | extraction ~15 min + cached-activation fits ~10 min + generation ~60–90 min + metrics ~15 min | **~2–2.5 h GPU (bf16-capable; fp32-only GPUs ~2–3× slower; resumable per stage/attribute)** |
 
 Lean design notes:
 
@@ -213,11 +214,11 @@ Optional Lean variant: **ToxiGen** (`toxigen/toxigen-data`) as a secondary impli
 | L2 | Refusal | CAA-style synthetic harmful/comply pairs | harmless/comply pairs | AdvBench (MIT) + XSTest (CC-BY-4.0) | synthetic; no gate |
 | — | Truthfulness (stretch) | TruthfulQA true claims (`truthfulqa/truthful_qa`) | false claims | TruthfulQA generation | Apache-2.0; ungated |
 
-**Lean = 4 attributes**: one per level plus a second L3; formality, refusal, and truthfulness move to Extended. No Lean dependency is gated or license-unknown.
+**Lean = 8 attributes**: the 4 English attributes above plus the 4 Indic attributes in §4.1b, all in the same run/config. Formality, refusal, and truthfulness move to Extended. No Lean dependency is gated or license-unknown.
 
 ### 4.1b E1b — Indic replication (Hindi + Telugu)
 
-Confirms the same pattern outside English using **authentic, public-domain author corpora** (no synthetic stories). Same model (BLOOMZ-1B7), same layer, same steering families, probes, and α calibration. Config: `configs/lean-indic.yaml`, run name `indic`.
+Confirms the same pattern outside English using **authentic, public-domain author corpora** (no synthetic stories). Same model (BLOOMZ-1B7), same layer, same steering families, probes, and α calibration — included in the single Lean run (`configs/lean.yaml`); restrict with `--attr sentiment_hi,story_hi,sentiment_te,story_te` if needed.
 
 | Level | Attribute | Hindi | Telugu | License / access |
 |---|---|---|---|---|
@@ -228,7 +229,7 @@ Confirms the same pattern outside English using **authentic, public-domain autho
 - Prompts: constructed in-language neutral story prompts (40 per attribute).
 - Confirmatory question per language: `H(story) > H(sentiment)` (the G1 analog) plus the `r*` behavior.
 - Telugu is reported as **secondary**: BLOOM tokenizer fertility for Telugu is poor (itself a quantity of interest for E2); Hindi is the primary replication.
-- Budget: +4 attribute runs ≈ +60–90 min GPU; run as a separate session (`download_assets.py` then `run_experiment.py` with `configs/lean-indic.yaml`).
+- Budget: the 4 Indic attributes are part of the same Lean run (~+60–90 min on bf16; fp32-only GPUs slower).
 - Provenance: Wikisource page caches live under `data/raw/wikisource/<corpus>/`; combined corpora under `data/processed/wikisource_*.jsonl`.
 - Corpus sizes after fetch (150-word chunks): Hindi 1638 (Premchand) / 1002 (Prasad); Telugu 177 (Gurajada) / 678 (Veeresalingam). The Telugu leg is matched down to Gurajada's volume (~177 docs) — treat it as a **small-n replication**, with Hindi as the primary Indic test.
 

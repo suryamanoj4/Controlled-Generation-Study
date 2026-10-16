@@ -1,8 +1,8 @@
 # SAS-E1 — Representation Complexity Study (code)
 
 Implementation of **Experiment 1** from the SAS design doc
-(`Obsidian Vault/AI Research/SAS E1 — Complexity Study Design.md`, v1.3, Lean mode,
-including the **E1b Indic replication**).
+(`Obsidian Vault/AI Research/SAS E1 — Complexity Study Design.md`, v1.4, Lean mode).
+The single Lean run covers both the English ladder and the Indic replication attributes.
 
 The study asks three questions in one harness:
 
@@ -65,18 +65,23 @@ bash scripts/setup.sh configs/pilot.yaml
 uv run python scripts/run_experiment.py --config configs/pilot.yaml --stage all
 ```
 
-### E1b — Indic replication (Hindi + Telugu)
+### Indic attributes (part of the same Lean run)
 
-Uses authentic, public-domain author corpora (hi/te Wikisource) plus permissively licensed
-sentiment sets; same model, layer, steering families, probes and gates as the English run.
+The Lean config includes — alongside the English attributes — **Hindi and Telugu**
+sentiment (L1) and author-style (L3) attributes, using authentic public-domain corpora
+(hi/te Wikisource) and permissively licensed sentiment sets. Same model, layer, steering
+families, probes and gates. Setup downloads them automatically; restrict when needed:
 
 ```bash
-bash scripts/setup.sh configs/lean-indic.yaml        # sentiment + Wikisource + wiki neutral
-uv run python scripts/run_experiment.py --config configs/lean-indic.yaml --stage all
+# full run (all 8 attributes)
+uv run python scripts/run_experiment.py --config configs/lean.yaml --stage all
+
+# example: only the Indic attributes
+uv run python scripts/run_experiment.py --config configs/lean.yaml \
+  --attr sentiment_hi,story_hi,sentiment_te,story_te --stage all
 ```
 
-Run it as a **separate session** after the English Lean run (~+60–90 min GPU). Telugu is a
-small-n replication (Gurajada's corpus is thin); Hindi is the primary Indic test.
+Telugu is a small-n replication (Gurajada's corpus is thin); Hindi is the primary Indic test.
 
 No-GPU smoke test of the math (numpy + pyyaml only, ephemeral env):
 
@@ -89,8 +94,8 @@ uv run --with numpy --with pyyaml python scripts/smoke_test.py
 - Model: `bigscience/bloomz-1b7` or `bigscience/bloomz-560m` (pilot); dtype `auto` —
   bf16 on Ampere/L4-class GPUs, fp32 elsewhere. **Avoid fp16**: BLOOM fp16 overflows to
   inf/NaN on some GPUs (e.g., T4), which breaks extraction and sampling.
-- Budget target: ~1.5–2 h GPU on bf16-class hardware (fp32 on T4 is roughly 2× slower).
-- E1b Indic: same model, **+60–90 min** as a separate session (4 attributes).
+- Budget target: ~2–2.5 h GPU for the full Lean run (8 attributes) on bf16-class hardware;
+  fp32-only GPUs are ~2–3× slower — stages and attributes are resumable, so split if needed.
 - Trained arms fit **on cached activations only** — no backprop through the base model.
 - Sample sizes are deliberately small (1,000 moment / 300 fit docs per side; 40 eval
   prompts) — adapters need hundreds of exemplars, and the sample-size curve validates saturation.
@@ -98,7 +103,7 @@ uv run --with numpy --with pyyaml python scripts/smoke_test.py
 ## Layout
 
 ```
-configs/            lean + pilot + Indic (lean-indic) experiment configs
+configs/            lean (full E1: EN + Indic) + pilot configs
 sas_e1/
   config.py         dotted-access config loader
   utils.py          metrics helpers (entropy, MTLD, IO, done-markers)
@@ -126,8 +131,8 @@ Artifacts land in `artifacts/<run_name>/<attribute>/<stage>/`. Raw prepared corp
 | Fable | `demelin/moral_stories` | MIT |
 | Wikipedia contrast / neutral probe | `wikimedia/wikipedia` | CC-BY-SA-3.0 + GFDL (attribution required) |
 | Optional implicit toxicity | `toxigen/toxigen-data` | MIT + CDLA-Permissive (research-use note) |
-| Hindi sentiment (E1b) | `iam-tsr/hindi-sentiments` | MIT, ungated |
-| Telugu sentiment (E1b) | `mounikaiiith/Telugu_Sentiment` | CC-BY-4.0, ungated |
-| Indic author styles (E1b) | hi/te Wikisource — Premchand vs Prasad; Gurajada vs Veeresalingam | public-domain texts; MediaWiki API |
+| Hindi sentiment (Indic) | `iam-tsr/hindi-sentiments` | MIT, ungated |
+| Telugu sentiment (Indic) | `mounikaiiith/Telugu_Sentiment` | CC-BY-4.0, ungated |
+| Indic author styles (Indic) | hi/te Wikisource — Premchand vs Prasad; Gurajada vs Veeresalingam | public-domain texts; MediaWiki API |
 
 See the design doc §4.1–§4.1b for the full rationale, corpus sizes, and the Extended (deferred) list.

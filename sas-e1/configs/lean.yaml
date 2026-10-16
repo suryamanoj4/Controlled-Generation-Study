@@ -1,4 +1,9 @@
-# SAS-E1 Lean config — see design doc v1.3 §2.2 / §4.1.
+# SAS-E1 Lean config — see design doc v1.4 §2.2 / §4.1–§4.1b.
+#
+# Single config for the full E1 experiment: English ladder (L1/L2/L3) **plus** the
+# Indic replication attributes (Hindi primary, Telugu secondary). Setup downloads
+# every corpus referenced here; the run covers all attributes.
+#   Restrict:  --attr sentiment,toxicity,shakespeare,fable,sentiment_hi,story_hi,sentiment_te,story_te
 run_name: lean
 seed: 0
 
@@ -12,7 +17,7 @@ paths:
 model:
   name: bigscience/bloomz-1b7
   dtype: auto                 # auto = bf16 if the GPU supports it, else fp32
-                            # (avoid fp16: BLOOM fp16 overflows to inf/NaN on some GPUs)
+                              # (avoid fp16: BLOOM fp16 overflows to inf/NaN on some GPUs)
   device: auto              # auto | cuda | cpu
   layer: null               # null -> use layer_fraction
   layer_fraction: 0.5       # 50% depth (layer 12 of 24 for BLOOM)
@@ -38,6 +43,7 @@ calibration:
   multipliers: [0.5, 1.0, 2.0, 4.0]   # m; alpha = m * alpha_unit (effect-norm calibrated)
 
 attributes:
+  # ---------------------------------------------------------- English ladder
   sentiment:
     level: L1
     kind: sentiment
@@ -58,13 +64,56 @@ attributes:
     kind: style
     positive: moral_stories
     contrast: wikipedia
+  # ------------------------------------------- Indic replication (hi + te)
+  sentiment_hi:
+    level: L1
+    kind: sentiment
+    positive: hindi_sent_positive
+    contrast: hindi_sent_negative
+    language: hi
+    classifier_model: xlm-roberta-base
+    n_stat_docs: 400
+    n_fit_docs: 150
+    n_clf_train: 400
+    n_clf_eval: 250
+  story_hi:
+    level: L3
+    kind: style
+    positive: wikisource_premchand
+    contrast: wikisource_prasad
+    language: hi
+    n_stat_docs: 400
+    n_fit_docs: 150
+    n_clf_train: 120
+    n_clf_eval: 80
+  sentiment_te:
+    level: L1
+    kind: sentiment
+    positive: telugu_sent_positive
+    contrast: telugu_sent_negative
+    language: te
+    classifier_model: xlm-roberta-base
+    n_stat_docs: 400
+    n_fit_docs: 150
+    n_clf_train: 400
+    n_clf_eval: 250
+  story_te:
+    level: L3
+    kind: style
+    positive: wikisource_gurajada
+    contrast: wikisource_veeresalingam
+    language: te
+    n_stat_docs: 400
+    n_fit_docs: 150
+    n_clf_train: 80
+    n_clf_eval: 50
 
 generation:
   prompts_per_attr: 40
   max_new_tokens: 128
   temperature: 1.0
   top_p: 0.95
-  batch_size: 8
+  batch_size: 8             # lower to 4 if you hit OOM on an 11 GB card
   seeds: [0, 1]
   arms: [A, F1, F4, F16, Ffull, C1, C4, E, R, P]
 
@@ -80,7 +129,7 @@ probes:
 
 evaluation:
   classifier:
-    embedding_model: distilbert-base-uncased
+    embedding_model: distilbert-base-uncased   # unused for Indic sentiment (per-attribute override)
     max_length: 256
     n_clf_train: 800
     n_clf_eval: 400
@@ -97,4 +146,6 @@ download:
   n_wikipedia: 6000         # contrast pool (fable contrast + oversized buffer)
   n_wikipedia_neutral: 500  # held-out neutral probe corpus
   n_moral: 6000
+  n_indic_sent: 6000        # per class, Hindi/Telugu sentiment pools
   gutenberg_sleep: 0.5      # seconds between Gutendex calls
+  wikisource_sleep: 1.0     # seconds between Wikisource API calls (politeness)
