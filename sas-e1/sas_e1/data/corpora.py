@@ -72,12 +72,23 @@ def split_pool(
     out: dict[str, list[dict]] = {}
     for label, docs in (("pos", pos), ("neg", neg)):
         docs = _shuffle(docs, seed + (0 if label == "pos" else 1))
+        total = len(docs)
         need = n_pool + n_clf_train + n_clf_eval
-        if len(docs) < need:
-            print(f"[split] WARNING: {label} has {len(docs)} docs, wanted {need}")
-        out[f"pool_{label}"] = docs[:n_pool]
-        out[f"clf_{label}_train"] = docs[n_pool : n_pool + n_clf_train]
-        out[f"clf_{label}_eval"] = docs[n_pool + n_clf_train : n_pool + n_clf_train + n_clf_eval]
+        if total < need:
+            print(f"[split] WARNING: {label} has {total} docs, wanted {need} — proportional split")
+            scale = total / need
+            p = max(1, int(n_pool * scale))
+            t = max(1, int(n_clf_train * scale))
+            e = total - p - t
+            if e < 1:
+                p = max(1, total - 2)
+                t = 1 if total >= 2 else 0
+                e = total - p - t
+        else:
+            p, t, e = n_pool, n_clf_train, n_clf_eval
+        out[f"pool_{label}"] = docs[:p]
+        out[f"clf_{label}_train"] = docs[p : p + t]
+        out[f"clf_{label}_eval"] = docs[p + t : p + t + e]
     return out
 
 
@@ -210,10 +221,10 @@ def attribute_corpora(cfg, attr_key: str, tokenizer, seed: int | None = None) ->
     pos = attach_token_counts(load_pool(cfg, attr.positive), tokenizer, max_length)
     neg = attach_token_counts(load_pool(cfg, attr.contrast), tokenizer, max_length)
 
-    n_stat = int(get(cfg, "steering.n_stat_docs", 2000))
-    n_fit = int(get(cfg, "steering.n_fit_docs", 400))
-    n_clf_train = int(get(cfg, "evaluation.classifier.n_clf_train", 1500))
-    n_clf_eval = int(get(cfg, "evaluation.classifier.n_clf_eval", 800))
+    n_stat = int(getattr(attr, "n_stat_docs", None) or get(cfg, "steering.n_stat_docs", 2000))
+    n_fit = int(getattr(attr, "n_fit_docs", None) or get(cfg, "steering.n_fit_docs", 400))
+    n_clf_train = int(getattr(attr, "n_clf_train", None) or get(cfg, "evaluation.classifier.n_clf_train", 1500))
+    n_clf_eval = int(getattr(attr, "n_clf_eval", None) or get(cfg, "evaluation.classifier.n_clf_eval", 800))
     n_pool = max(3 * n_stat, n_stat + 600)
 
     splitter = split_pool_by_source if attr_key == "shakespeare" else split_pool

@@ -58,6 +58,8 @@ attributes:
     positive: wikisource_premchand
     contrast: wikisource_prasad
     language: hi
+    n_clf_train: 120
+    n_clf_eval: 80
   sentiment_te:
     level: L1
     kind: sentiment
@@ -71,6 +73,8 @@ attributes:
     positive: wikisource_gurajada
     contrast: wikisource_veeresalingam
     language: te
+    n_clf_train: 80
+    n_clf_eval: 50
 
 generation:
   prompts_per_attr: 40

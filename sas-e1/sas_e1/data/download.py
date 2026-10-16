@@ -416,7 +416,7 @@ WIKISOURCE_AUTHORS = {
     "wikisource_gurajada": {
         "site": "https://te.wikisource.org",
         "author": "Gurajada Apparao",
-        "prefixes": ["కన్యాశుల్కము/", "గురజాడలు/కథానికలు/", "గురుజాడలు/కవితలు/"],
+        "prefixes": ["కన్యాశుల్కము/", "గురజాడలు/కథానికలు/", "గురుజాడలు/కవితలు/", "బిల్హణీయము"],
     },
     "wikisource_veeresalingam": {
         "site": "https://te.wikisource.org",
@@ -562,7 +562,7 @@ def _load_or_fetch_wikisource_author(cfg, corpus_name: str, force: bool = False)
             continue
         consecutive_failures = 0
         fetched += 1
-        docs = _chunk_by_paragraphs(text)
+        docs = _chunk_by_paragraphs(text, min_words=12)
         rows.extend({"text": d, "source": f"{spec['author']} — {title}", "label": None} for d in docs)
         if (idx + 1) % 10 == 0:
             print(f"[wikisource] {corpus_name}: {idx + 1}/{len(titles)} pages, {len(rows)} docs so far")

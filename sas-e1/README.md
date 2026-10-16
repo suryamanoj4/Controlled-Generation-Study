@@ -31,6 +31,19 @@ uv run python scripts/run_experiment.py --config configs/lean.yaml --stage all
 On Colab/Kaggle (before `uv sync`): `%pip install uv` then run the same commands from a
 notebook cell with `!uv ...` / `!bash scripts/setup.sh ...`.
 
+Selective setup — models and data can be provisioned independently; with no flag both run:
+
+```bash
+# datasets only (e.g., your model snapshots are already cached elsewhere)
+python scripts/download_assets.py --config configs/lean.yaml --data-only
+# model snapshots only (e.g., datasets prepared on a previous session)
+python scripts/download_assets.py --config configs/lean.yaml --models-only
+# both (default)
+python scripts/download_assets.py --config configs/lean.yaml
+```
+
+`scripts/setup.sh` forwards the same flags after the config path.
+
 Without uv (legacy pip):
 
 ```bash

@@ -15,7 +15,6 @@ from ..data import corpora
 from ..data.prompts import few_shot_prefix, neutral_prompts
 from ..evaluation import metrics as metric_utils
 from ..evaluation.classifiers import EmbeddingLRClassifier, TfidfStyleClassifier, evaluate_classifier
-from ..evaluation.generate import generate_condition
 from ..models import (
     block_list,
     extract_doc_vectors,
@@ -284,6 +283,8 @@ def _build_classifier(cfg, attr: str, device):
 
 
 def eval_attr(cfg, attr: str, model, tokenizer, device, force: bool = False) -> None:
+    from ..evaluation.generate import generate_condition  # lazy: torch-heavy import
+
     ad = ensure_dir(attr_dir(cfg, attr, "eval"))
     conditions_path = ad / "conditions.jsonl"
     if is_done(ad) and not force:
