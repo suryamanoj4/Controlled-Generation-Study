@@ -12,7 +12,7 @@ Author-style transfer — generating text that matches a defined narrative voice
 
 The design synthesizes three proven lineages: the **form** of IP-Adapter (lightweight pluggable module, scale knob, no-op until activated), the **ideology** of contrastive activation steering (CAA / Author-Style Steering vectors as the style signal source), and the **mitigation** of sparse steering (CAS-BiPO-style masks against the α-excessiveness problem). The style object is the adapter — a low-rank operator plus bias channel — fitted per model by a brief adapter-only run (n→n, no dimension changes, no-op until activated). The *framework* (form, recipe, measurements) is model-agnostic; the *artifact* is per-model — we do not claim cross-model weight transfer.
 
-Two empirical axes define the paper's contribution: **(1) attribute complexity** — measured from the adapter itself via an entropy proxy (we predict sentiment < safety < author style), and **(2) language representation** — steering gain per language correlated with the model's published training splits. Primary application: author-style transfer (public-domain corpora); a low-resource storytelling tradition (Chandamama) serves as an example setting, and a cross-lingual author test ("make Hindi sound like Shakespeare") probes how much of style is language-neutral.
+Two empirical axes define the paper's contribution: **(1) attribute complexity** — measured from the adapter itself via an entropy proxy (we predict sentiment < safety < author style), and **(2) language representation** — steering gain per language correlated with the model's published training splits. Primary application: author-style transfer (public-domain corpora); a low-resource-language replication on authentic Hindi/Telugu author corpora serves as an example setting, and a cross-lingual author test ("make Hindi sound like Shakespeare") probes how much of style is language-neutral.
 
 ---
 
@@ -20,7 +20,7 @@ Two empirical axes define the paper's contribution: **(1) attribute complexity**
 
 ### 1.1 The problem
 
-**Author-style transfer:** generate text in a **defined narrative voice** — e.g., a specific author's style (Shakespeare, Austen), a story-telling tradition (Chandamama Kathalu / Panchatantra: frame-story structure, talking-animal characters, didactic moral codas, folk-tale register), or any well-defined style corpus — **without fine-tuning the base model and without RAG**. Chandamama is one candidate style corpus among several, chosen when we want an authentic low-resource-language test case.
+**Author-style transfer:** generate text in a **defined narrative voice** — e.g., a specific author's style (Shakespeare, Austen), a storytelling tradition (Panchatantra-family folk tales: frame-story structure, talking-animal characters, didactic moral codas), or any well-defined style corpus — **without fine-tuning the base model and without RAG**. For the low-resource-language test case we use authentic public-domain authors: Premchand vs. Prasad (Hindi) and Gurajada vs. Veeresalingam (Telugu).
 
 Prior decoding-time control (FUDGE, DExperts, GeDi, PPLM) works reliably for *token-level* attributes (sentiment, formality, topic) but the literature repeatedly shows it is hard for *complex, discourse-level* attributes — precisely our target. Vector-based activation steering (CAA, Author-Style Steering) handles surface styles but (a) requires a per-model vector, (b) uses a static strength coefficient whose excess collapses coherence, and (c) is limited by LLM-synthesized style exemplars.
 
@@ -34,7 +34,7 @@ Prior decoding-time control (FUDGE, DExperts, GeDi, PPLM) works reliably for *to
 2. **No RAG** (no content injection / retrieval of story text).
 3. **No shared-vocabulary requirement** between any external model and the generator (this killed the earlier logit-fusion design; activation-level control is tokenizer-agnostic).
 4. **Minimal training cost** at most — never a full training cycle.
-5. Feasible at **small model scale** — including low-resource languages as one example setting (e.g., Telugu for the Chandamama corpus), not as the primary claim.
+5. Feasible at **small model scale** — including low-resource languages as one example setting (Hindi and Telugu author-style corpora from Wikisource), not as the primary claim.
 
 ---
 
@@ -96,7 +96,7 @@ Replace the per-model steering *vector* with an **identity-preserving, model-agn
 - A LoRA-style adapter attached to the residual stream at mid-layers of the base model: `h' = h + (B·A)h + b`
 - **Identity by default:** zero-init `B` (and zero `b`) ⇒ `h' = h` exactly — the module is a no-op until activated, like a norm layer that doesn't change the model's behavior. This is LoRA's standard design contract (also used by ControlNet and IP-Adapter).
 - **n→n dimensions:** the adapter maps hidden dimension to itself; no dimension projections needed. The adapter "sits between 2 layers" of *any* model of *any* width (each instance has its own n×n/low-rank matrices, fitted per model).
-- **The style object is the adapter, not the vector.** A library of style adapters (Shakespeare-style, Austen-style, Chandamama-style, moral-fable-style, ...) is produced by one shared recipe: per-style corpora, one brief fit per model (§4.3).
+- **The style object is the adapter, not the vector.** A library of style adapters (Shakespeare-style, Austen-style, Premchand-style, Gurajada-style, moral-fable-style, ...) is produced by one shared recipe: per-style corpora, one brief fit per model (§4.3).
 
 ### 4.2 Why an adapter is more expressive than a vector
 
@@ -121,10 +121,10 @@ Rationale: we **never rely on zero-shot cross-model transfer** (which is scale-g
 
 ### 4.4 Vision: style adapter library
 
-- One **style adapter** per (style, model) pair, fitted briefly from authentic corpora (fixes the "dataset circularity" limitation of Author-Style Steering, which used LLM-generated style exemplars — authentic corpora such as public-domain author texts or the Chandamama corpus avoid this).
+- One **style adapter** per (style, model) pair, fitted briefly from authentic corpora (fixes the "dataset circularity" limitation of Author-Style Steering, which used LLM-generated style exemplars — authentic corpora such as public-domain author texts (Gutenberg; hi/te Wikisource) avoid this).
 - Fitted adapters are tiny and disposable; the **recipe** (corpora, contrastive protocol, fitting, measurement) is the reusable asset.
 - Comparable to the IP-Adapter ecosystem in image generation (pluggable module, scale knob) — with the difference that weights are per-model, not shared (§4.6).
-- **Any well-defined style corpus works** — author styles (Shakespeare/Austen), storytelling traditions (Chandamama/Panchatantra), or a cross-lingual author test ("can we make Hindi sound like Shakespeare?" — a clean probe of how much of the style signal is language-neutral vs. lexical/register-bound).
+- **Any well-defined style corpus works** — author styles (Shakespeare/Austen; Premchand/Gurajada for the Indic legs), storytelling traditions (Panchatantra family), or a cross-lingual author test ("can we make Hindi sound like Shakespeare?" — a clean probe of how much of the style signal is language-neutral vs. lexical/register-bound).
 
 ### 4.5 Design position: a synthesis (honest framing)
 
@@ -231,8 +231,7 @@ The adapter must *represent* the attribute's knowledge. Four representation fami
 | Resource | Use |
 |---|---|
 | **Public-domain author corpora** (Project Gutenberg: Shakespeare, Austen, etc.) | Primary author-style leg; authentic (no LLM circularity); natural per-author contrast sets (verify per-text licensing) |
-| **Chandamama Kathalu corpus (Swecha)** — *example style corpus* | ~40,000 proofread Telugu story pages; gated HF dataset (contact required) |
-| Swecha datathon / AI Chandamama Kathalu SLM — *example prior work* | prior work = **fine-tuning only** (our training-free alternative is unoccupied) |
+| **Indic author corpora** (hi/te Wikisource: Premchand vs. Prasad; Gurajada vs. Veeresalingam) — *example style corpora* | Public-domain texts; MediaWiki API fetch with per-page caching; the low-resource-language replication |
 | Moral Stories (Emelin et al., EMNLP 2021) | 720K structured branching narratives, moral norms |
 | TF1-EN-3M (2026) | 3M synthetic moral fables; evaluation methodology; explicitly Western (Aesop) — cultural-bias gap we can fill |
 | Tales of Morality (Findings EMNLP 2025) | LLMs over-emphasize "Care" moral foundation and flatten narrative arcs **even under moral conditioning** — our evaluation target |
@@ -253,7 +252,7 @@ The adapter must *represent* the attribute's knowledge. Four representation fami
 2. **Steering representations are effective within a model** (Agarwal 2026; Author-Style Steering): directions extracted from a model's own activations steer it reliably; cross-model transfer is a bonus we do not rely on.
 3. **Learned cross-model mappings exist** (Oozeer et al., ICML 2025): a translator transfers interventions across models — evidence that activation-space geometry is mappable; our design avoids needing this by fitting per model.
 4. **Identity-preserving adapters are standard** (LoRA zero-init contract) — the no-op-until-activated design is proven in production.
-5. **Authentic corpus advantage:** our cores come from genuine style corpora (public-domain author texts; Chandamama for the low-resource example), avoiding the circularity limitation of Author-Style Steering (LLM-synthesized exemplars) — this is an *improvement* over the closest prior method, not a copy.
+5. **Authentic corpus advantage:** our cores come from genuine style corpora (public-domain author texts — Gutenberg for English, hi/te Wikisource for the Indic replication), avoiding the circularity limitation of Author-Style Steering (LLM-synthesized exemplars) — this is an *improvement* over the closest prior method, not a copy.
 6. **Hidden-state level ⇒ no tokenizer constraint** (unlike logit-level fusion) — removes the earlier blocker.
 
 ### 6.2 Evidence AGAINST / Conditions
@@ -295,7 +294,7 @@ The adapter must *represent* the attribute's knowledge. Four representation fami
 
 **Analysis:** correlate per-language steering gain with (log) training-data proportion and token-fertility covariates. Precedent for behavior↔representation correlations exists (Schut et al., 2025 — English-centric reasoning; Winata et al. — language norm correlates with data proportion), but steering-gain correlation is unstudied.
 
-**Caveat — style-language entanglement:** a style core trained on a specific language's corpus (e.g., Telugu Chandamama) encodes that language's specific markers; cross-lingual transfer of *style* is contaminated by *language* signal. Mitigations: (a) language-neutral attributes (sentiment/formality/safety) for the cross-lingual leg; (b) per-language style cores where parallel corpora exist; (c) the "Hindi Shakespeare" test as an explicit entanglement probe (if an English author's style core transfers to Hindi output, the style signal is partly language-neutral).
+**Caveat — style-language entanglement:** a style core trained on a specific language's corpus (e.g., the Telugu Gurajada corpus) encodes that language's specific markers; cross-lingual transfer of *style* is contaminated by *language* signal. Mitigations: (a) language-neutral attributes (sentiment/formality/safety) for the cross-lingual leg; (b) per-language style cores where parallel corpora exist; (c) the "Hindi Shakespeare" test as an explicit entanglement probe (if an English author's style core transfers to Hindi output, the style signal is partly language-neutral).
 
 ---
 
@@ -326,7 +325,7 @@ Does an English-author style core transfer to Hindi output? Quantifies style-sig
 
 ### 7.6 Datasets
 
-Public-domain author corpora (Shakespeare/Austen via Project Gutenberg) for the primary author-style leg; Chandamama corpus (Swecha) as the low-resource style example; Moral Stories / TF1-EN-3M-style templates for controlled prompts; TALES-style cultural annotations for cultural-fidelity checks.
+Public-domain author corpora (Shakespeare/Austen via Project Gutenberg) for the primary author-style leg; hi/te Wikisource author corpora (Premchand vs. Prasad; Gurajada vs. Veeresalingam) for the low-resource replication; Moral Stories / TF1-EN-3M-style templates for controlled prompts; TALES-style cultural annotations for cultural-fidelity checks.
 
 ### 7.7 Baselines & ablations
 
@@ -389,7 +388,7 @@ Dataset choice is downstream of claims. The matrix below assigns each experiment
 - Hindi and Telugu sentiment corpora (English alternatives are trivial — Yelp/SST-2; per-language sentiment is the constraint for E3). Candidates: Hindi movie-review / SentiWordNet-derived sets; Telugu sentiment tweet sets; multilingual sets (e.g., XED-emotion, MT-Sentiment) — verify presence, license, and size.
 - GYAFC availability (HF mirror exists) and its contrast structure.
 - ToxiGen / TruthfulQA access; Moral Stories (Emelin et al., EMNLP 2021) on HF.
-- Chandamama multilingual editions (13+ languages historically; digital availability per language — Telugu confirmed via Swecha; Hindi/Tamil/Marathi editions unverified).
+- Indic author corpora page-level availability (hi/te Wikisource): verified for Premchand, Jaishankar Prasad, Gurajada, and Veeresalingam; per-page cache keeps fetches resumable.
 - Hindi narrative prose slice (OSCAR/mC4 `hi`) usable as generic contrast without license issues.
 
 ---
@@ -401,7 +400,7 @@ Dataset choice is downstream of claims. The matrix below assigns each experiment
 1. **Mechanism:** the adapter-as-steering-representation with identity-preserving zero-init and bias channel, with *demonstrated* advantages over static vectors (input-dependent modulation, compactness, model-agnostic recipe).
 2. **Measurement:** an **entropy-based measure of attribute complexity** extracted from the learned adapter core, validated against an attribute-complexity ladder (§6.3).
 3. **Probe:** a **language-representation probe** — steering gain per language correlated with the model's published training splits (§6.4).
-4. **Application:** authentic-corpus style steering (fixes the dataset-circularity limitation), demonstrated on author styles and, as one example, a low-resource narrative tradition, with the cross-lingual author test ("Hindi Shakespeare") as a secondary leg.
+4. **Application:** authentic-corpus style steering (fixes the dataset-circularity limitation), demonstrated on author styles and, as one example, a low-resource-language author replication (Hindi/Telugu), with the cross-lingual author test ("Hindi Shakespeare") as a secondary leg.
 
 ---
 
@@ -427,11 +426,11 @@ Dataset choice is downstream of claims. The matrix below assigns each experiment
 - **D-3. Attachment location:** single mid-layer (which one, by what rule — fractional depth? learned gates over multiple layers?) vs. all layers with learned gating.
 - **D-4. Fitting details:** how many exemplars (100? 1,000?), which loss (next-token CE on style corpus? feature-matching to target style activations? contrastive?), how long, and what is frozen.
 - **D-5. Strength control:** static α (grid-searched, as prior work) vs. adaptive α (Author-Style lists it as future work; we could claim it) vs. CAS-BiPO-style sparse masking.
-- **D-6. Base model choice:** target-language-capable small model (e.g., Telugu-capable for the Chandamama example) vs. English-only validation first vs. **multilingual model with documented per-language training splits** (mT5-XL — mC4 proportions published; BLOOM-1B7 — decoder-only, OSCAR/ROOTS stats). The 1.7B threshold (Agarwal 2026) applies to cross-model transfer, which we do not rely on; scale choice is therefore free — but measure fit quality across scales as a robustness check.
+- **D-6. Base model choice:** target-language-capable small model (e.g., Hindi/Telugu-capable for the Indic replication) vs. English-only validation first vs. **multilingual model with documented per-language training splits** (mT5-XL — mC4 proportions published; BLOOM-1B7 — decoder-only, OSCAR/ROOTS stats). The 1.7B threshold (Agarwal 2026) applies to cross-model transfer, which we do not rely on; scale choice is therefore free — but measure fit quality across scales as a robustness check.
 - **D-7. Scorer (optional second stage):** do we add a FUDGE-style style scorer / sequence-level review (Best-of-N gate) on top of the adapter, or keep the adapter pure?
-- **D-8. Style core training data:** author-style cores (public-domain texts — Shakespeare, Austen, ...) as the primary leg; storytelling-tradition corpora (Chandamama, Panchatantra+Jataka family) as the secondary/low-resource example; per-style vs. style-family cores; a cross-lingual author test ("Hindi Shakespeare") as an entanglement probe. Also: what is the *generic* contrast corpus (per language — where from?).
+- **D-8. Style core training data:** author-style cores (public-domain texts — Shakespeare, Austen, ...) as the primary leg; storytelling-tradition corpora (Panchatantra+Jataka family) and hi/te author corpora (Premchand↔Prasad; Gurajada↔Veeresalingam) as the secondary/low-resource examples; per-style vs. style-family cores; a cross-lingual author test ("Hindi Shakespeare") as an entanglement probe. Also: what is the *generic* contrast corpus (per language — where from?).
 - **D-9. Evaluation judges:** human (native speakers of the target language, cost), LLM judge (which), structural metrics (MFT via lexicon, arc shape via LIWC-style analysis), and how many outputs for statistical power (multi-seed, low-resource variance).
-- **D-10. Style-language entanglement:** (a) language-neutral attributes for the cross-lingual ablation leg; (b) per-language style cores from parallel corpora (Chandamama had 13+ language editions — availability check needed); (c) the cross-lingual author-style test as a deliberate probe of language-neutrality.
+- **D-10. Style-language entanglement:** (a) language-neutral attributes for the cross-lingual ablation leg; (b) per-language style cores trained on each language's own author corpus (as in the Indic replication); (c) the cross-lingual author-style test as a deliberate probe of language-neutrality.
 - **D-11. Entropy-based complexity metric:** which proxy (SVD-spectrum entropy of core / effective rank / mask sparsity / layer spread / induced-Δh entropy), and the corpus-matching protocol to control diversity confounds (§6.3). Decide before the ladder experiments so all attributes share one metric.
 - **D-12. Representation-choice sub-questions (fixed choice: fitted low-rank operator + bias, §4.6):** (a) initialize the core from a GCS-estimated subspace or a conceptor (warm start) vs. random? (b) regularize the core's spectrum during fitting (e.g., soft-rank penalty) to sharpen the complexity metric? (c) is the bias channel fitted per model too, or shared across attributes?
 
@@ -469,8 +468,8 @@ Dataset choice is downstream of claims. The matrix below assigns each experiment
 28. Tales of Morality — [2025.findings-emnlp.1029](https://aclanthology.org/2025.findings-emnlp.1029/)
 29. TALES (Bhagat et al.) — [arXiv:2511.21322](https://arxiv.org/abs/2511.21322)
 30. Multilingual TinyStories — [arXiv:2603.14563](https://arxiv.org/abs/2603.14563)
-31. Chandamama Kathalu dataset — [HF swechatelangana](https://huggingface.co/datasets/swechatelangana/chandamama-kathalu)
-32. Swecha coverage — [MediaNama](https://www.medianama.com/2023/12/223-folklore-ai-swecha-telugu-chatbot/), [Hindu BusinessLine](https://www.thehindubusinessline.com/info-tech/gen-ai-gives-a-new-lease-of-life-to-old-favourite-chandamama-stories/article67716201.ece)
+31. Indic replication corpora — [hi Wikisource](https://hi.wikisource.org) · [te Wikisource](https://te.wikisource.org) (public-domain texts: Premchand/Prasad; Gurajada/Veeresalingam); Hindi sentiment [iam-tsr/hindi-sentiments](https://huggingface.co/datasets/iam-tsr/hindi-sentiments) (MIT); Telugu sentiment [mounikaiiith/Telugu_Sentiment](https://huggingface.co/datasets/mounikaiiith/Telugu_Sentiment) (CC-BY-4.0)
+32. Wikisource MediaWiki API — [API:Main page](https://www.mediawiki.org/wiki/API:Main_page) (corpus fetch for the Indic replication)
 33. Schut et al. 2025, Do Multilingual LLMs Think In English? — [arXiv:2502.15603](https://arxiv.org/abs/2502.15603)
 34. Engels et al. 2024, Not All Language Model Features Are Linear — [arXiv:2405.14860](https://arxiv.org/abs/2405.14860)
 35. Xue et al. 2021, mT5 (mC4 per-language proportions, Fig. 1 + appendix) — [arXiv:2010.11934](https://arxiv.org/abs/2010.11934)
@@ -489,4 +488,4 @@ Dataset choice is downstream of claims. The matrix below assigns each experiment
 
 ---
 
-*Reformatted as research proposal 2026-09-11 · updated 2026-09-12 (§4.6 representation choice, refs 36–46, D-12, terminology pass: model-agnostic / not portable, §7.8–7.9 objective ablation & cost analysis) · updated 2026-10-13 (citation corrections: CAA/ICV IDs fixed, Da Silva et al. replaces mis-attributed Tan et al., Subbiah et al. limits study, GCS venue, Agarwal effect sizes; +ref 47) · Living document — edit as design decisions are resolved.*
+*Reformatted as research proposal 2026-09-11 · updated 2026-09-12 (§4.6 representation choice, refs 36–46, D-12, terminology pass: model-agnostic / not portable, §7.8–7.9 objective ablation & cost analysis) · updated 2026-10-13 (citation corrections: CAA/ICV IDs fixed, Da Silva et al. replaces mis-attributed Tan et al., Subbiah et al. limits study, GCS venue, Agarwal effect sizes; +ref 47) · updated 2026-10-16 (Chandamama scrubbed; Indic replication framing: Hindi/Telugu author corpora from Wikisource + sentiment datasets; refs 31–32 replaced) · Living document — edit as design decisions are resolved.*

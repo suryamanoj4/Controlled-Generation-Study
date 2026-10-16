@@ -6,7 +6,9 @@
 - [[Low Resource Story Generation]] — Cross-lingual transfer, multilingual models, prompt engineering, few-shot learning, LLM comparisons, active learning, cultural metrics, story grammar transfer, benchmarks, African/SE Asian languages
 - [[Agent Based Story Generation]] — Multi-agent systems, orchestration frameworks, human-AI co-creation, simulation-based narrative, agent communication, self-optimization, memory architectures, interactive fiction, cost benchmarks
 - [[Agent Story Generation — Extended Research Report]] — Detailed supplementary findings on agent-based story generation
-- [[Style Adapter Steering — Model-Agnostic Narrative Style Control]] — Research proposal: self-aligning, pluggable style adapters for inference-time author-style control (no fine-tuning, no RAG); attribute-complexity & language-representation axes; Chandamama as one example corpus
+- [[Style Adapter Steering — Model-Agnostic Narrative Style Control]] — Research proposal: self-aligning, pluggable style adapters for inference-time author-style control (no fine-tuning, no RAG); attribute-complexity & language-representation axes; Hindi/Telugu author-style replication as the low-resource example
+- [[SAS E1 — Complexity Study Design]] — Experiment 1 design (v1.3): complexity ladder vs. adapter necessity, probes/metrics/gates, Lean + E1b Indic budgets, dataset licensing
+- [[SAS E1 — Prior Work Research (Steering Complexity)]] — Verified prior art on steering-representation complexity, evaluation protocols, and design implications for E1
 
 ## Extended Topics Covered in This Vault
 
