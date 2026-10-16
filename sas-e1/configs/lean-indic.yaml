@@ -29,8 +29,8 @@ steering:
   sv_clip: 10.0
   ranks: [1, 4, 16]
   include_full_rank: true
-  n_fit_docs: 200
-  n_stat_docs: 600
+  n_fit_docs: 150
+  n_stat_docs: 400
   resamples: [0, 1]
   trained:
     ranks: [1, 4]
@@ -91,7 +91,7 @@ matching:
   min_tokens: 4
 
 probes:
-  n_neutral: 400
+  n_neutral: 300
   separation: true
   stability: true
 
@@ -99,8 +99,8 @@ evaluation:
   classifier:
     embedding_model: distilbert-base-uncased   # unused for Indic sentiment (per-attr override)
     max_length: 256
-    n_clf_train: 800
-    n_clf_eval: 400
+    n_clf_train: 400
+    n_clf_eval: 250
   ppl_model: null
   judge:
     enabled: false
@@ -108,7 +108,7 @@ evaluation:
 
 download:
   n_wikipedia: 500
-  n_wikipedia_neutral: 400
-  n_indic_sent: 12000
+  n_wikipedia_neutral: 300
+  n_indic_sent: 6000
   gutenberg_sleep: 0.5
   wikisource_sleep: 1.0

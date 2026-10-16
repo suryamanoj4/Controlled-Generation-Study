@@ -71,8 +71,8 @@ h' = h + W h + b
 | Rank r | Lean: {1, 4, 16} + F∞ · Extended: {1, 2, 4, 8, 16, 32} | arms F (closed-form) and C (trained) |
 | Attribute | Lean: 4 across 3 levels (sentiment, toxicity, Shakespeare, fable) · Extended: 6–8 | §4.1 |
 | Layer | Lean: layer 12 (50%) only · Extended: {33%, 50%, 66%} descriptive | §3.8 |
-| Seed / resample | Lean: 2 seeds (trained) / 3 resamples (closed-form) · Extended: 5/5 | distributions reported, never best run |
-| Model | bloomz-1b7 primary (fp16, T4-compatible); bloomz-560m fallback/pilot; bloom-1b7 robustness in Extended | §2.3 |
+| Seed / resample | Lean: 2 seeds (trained) / 2 resamples (closed-form) · Extended: 5/5 | distributions reported, never best run |
+| Model | bloomz-1b7 primary (dtype `auto`: bf16 if supported, else fp32 — **never fp16** for BLOOM); bloomz-560m pilot; bloom-1b7 robustness in Extended | §2.3 |
 
 **P (prompting) is mandatory**: AxBench (ICML 2025) found prompting to be the strongest baseline on many attributes — the vector/adapter result is uninterpretable without it.
 
@@ -82,14 +82,15 @@ h' = h + W h + b
 
 | Grid | Composition | Runs |
 |---|---|---|
-| Ladder (primary) | 4 attrs × closed-form {A, F∞, F1, F4, F16, E, R} × 3 resamples + trained {C1, C4} × 2 seeds | ~100 (mostly free) |
+| Ladder (primary) | 4 attrs × closed-form {A, F∞, F1, F4, F16, E, R} × 2 resamples + trained {C1, C4} × 2 seeds | ~90 (mostly free) |
 | Mini sample-size curve | {sentiment, Shakespeare} × sizes {16, 64, 256} × 3 resamples | 18 |
-| Generation eval | 4 attrs × 9 arms × 4 scale points {0.5, 1, 2, 4} × 60 prompts × 2 generation seeds ≈ 17k short generations | — |
-| **Compute** | extraction ~15 min + cached-activation fits ~5 min + generation ~40–60 min + metrics ~10 min | **~1.5–2 h GPU** |
+| Generation eval | 4 attrs × 9 arms × 4 scale points {0.5, 1, 2, 4} × 40 prompts × 2 generation seeds ≈ 11k short generations | — |
+| **Compute** | extraction ~8 min + cached-activation fits ~5 min + generation ~30–45 min + metrics ~10 min | **~1–1.5 h GPU (bf16-capable; fp32-only GPUs ~2–3× slower)** |
 
 Lean design notes:
 
 - **Trained arms fit on cached activations only** — no forward/backward through the base model. The moment-matching loss is a function of stored layer-L activations, so C1/C4 fits take seconds. The experiment is effectively inference-only.
+- **Sample sizes are deliberately small:** 1,000 docs/side for moment statistics, 300/side for fitting, 500 neutral probe docs, 800/400 classifier train/eval, 40 eval prompts. Adapters need only hundreds of exemplars; the sample-size curve is what demonstrates saturation rather than assuming it.
 - Closed-form arms require one extraction pass per attribute; all rank truncations and resamples are numpy/SVD.
 - Judge: optional subsample (~100 generations/attribute) via API, or skipped entirely in Tier A.
 - **Tier A** (inference-only, no trained arms): ~45–60 min — closed-form ladder only.

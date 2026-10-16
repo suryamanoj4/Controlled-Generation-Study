@@ -1,4 +1,4 @@
-# SAS-E1 Lean config — see design doc v1.2 §2.2 / §4.1.
+# SAS-E1 Lean config — see design doc v1.3 §2.2 / §4.1.
 run_name: lean
 seed: 0
 
@@ -22,9 +22,9 @@ steering:
   sv_clip: 10.0             # clip singular values of the moment map
   ranks: [1, 4, 16]         # closed-form rank truncations (arm F_r)
   include_full_rank: true   # arm Ffull
-  n_fit_docs: 400           # per side, used for fitting
-  n_stat_docs: 2000         # per side, used for moment statistics
-  resamples: [0, 1, 2]      # closed-form resamples (bootstrap of stat docs)
+  n_fit_docs: 300           # per side, used for fitting (adapters need hundreds, not thousands)
+  n_stat_docs: 1000         # per side, used for moment statistics
+  resamples: [0, 1]         # closed-form resamples (bootstrap of stat docs)
   trained:
     ranks: [1, 4]           # arms C1, C4
     seeds: [0, 1]
@@ -60,7 +60,7 @@ attributes:
     contrast: wikipedia
 
 generation:
-  prompts_per_attr: 60
+  prompts_per_attr: 40
   max_new_tokens: 128
   temperature: 1.0
   top_p: 0.95
@@ -74,7 +74,7 @@ matching:
   min_tokens: 4             # sentence-level corpora need a low floor (SST-2)
 
 probes:
-  n_neutral: 1000
+  n_neutral: 500
   separation: true
   stability: true
 
@@ -82,19 +82,19 @@ evaluation:
   classifier:
     embedding_model: distilbert-base-uncased
     max_length: 256
-    n_clf_train: 1500
-    n_clf_eval: 800
+    n_clf_train: 800
+    n_clf_eval: 400
   ppl_model: null           # null -> same as steering model
   judge:
     enabled: false
     model: gpt-4o-mini
 
 download:
-  n_sst_fit: 8000           # per class, fitting pool
-  n_sst_clf: 4000           # per class, classifier train (disjoint)
-  n_sst_eval: 2000          # per class, classifier eval / S_human (disjoint)
-  n_civil: 30000            # per class pool
-  n_wikipedia: 16000        # contrast pool (fable contrast + oversized buffer)
-  n_wikipedia_neutral: 1000 # held-out neutral probe corpus
-  n_moral: 12000
+  n_sst_fit: 3000           # per class, steering pool (stat + fit + matching buffer)
+  n_sst_clf: 2000           # per class, classifier train (disjoint)
+  n_sst_eval: 1000          # per class, classifier eval / S_human (disjoint)
+  n_civil: 8000             # per class pool
+  n_wikipedia: 6000         # contrast pool (fable contrast + oversized buffer)
+  n_wikipedia_neutral: 500  # held-out neutral probe corpus
+  n_moral: 6000
   gutenberg_sleep: 0.5      # seconds between Gutendex calls

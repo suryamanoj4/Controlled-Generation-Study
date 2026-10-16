@@ -92,6 +92,8 @@ uv run --with numpy --with pyyaml python scripts/smoke_test.py
 - Budget target: ~1.5–2 h GPU on bf16-class hardware (fp32 on T4 is roughly 2× slower).
 - E1b Indic: same model, **+60–90 min** as a separate session (4 attributes).
 - Trained arms fit **on cached activations only** — no backprop through the base model.
+- Sample sizes are deliberately small (1,000 moment / 300 fit docs per side; 40 eval
+  prompts) — adapters need hundreds of exemplars, and the sample-size curve validates saturation.
 
 ## Layout
 
