@@ -23,6 +23,8 @@ env/
 sas-e1/data/
 sas-e1/models/
 sas-e1/artifacts/
+sas-e1/artifacts-lean/    # local copies of run outputs (downloaded from Colab)
+sas-e1/artifacts-pilot/
 
 # ---------- notebooks ----------
 .ipynb_checkpoints/

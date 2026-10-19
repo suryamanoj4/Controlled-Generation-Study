@@ -1,7 +1,7 @@
 # SAS-E1 — Representation Complexity Study (code)
 
 Implementation of **Experiment 1** from the SAS design doc
-(`Obsidian Vault/AI Research/SAS E1 — Complexity Study Design.md`, v1.4, Lean mode).
+(`Obsidian Vault/AI Research/SAS E1 — Complexity Study Design.md`, v1.5, Lean mode).
 The single Lean run covers both the English ladder and the Indic replication attributes.
 
 The study asks three questions in one harness:
@@ -15,6 +15,18 @@ The study asks three questions in one harness:
 All steerers are one nested family of linear operators on the residual stream:
 `h' = h + W h + b` (vector: `W = 0`; closed-form moment operator: `W* = Σ_P^{1/2} Σ_N^{-1/2} − I`,
 rank-truncated; trained adapter: `W = BA`).
+
+## Results (Lean run — 2026-10-18)
+
+The full Lean run completed (8 attributes, all stages; two resumable Colab sessions) and
+the analyzed outputs live in `artifacts/lean/analysis/` (`report.md`, `summary.json`).
+Headline: the complexity ladder is confirmed — `H_action(F16)` level means **L1 0.054 <
+L2 0.316 < L3 0.973**, and style legs are genuinely higher-rank (shakespeare erank ≈ 5.3
+vs ≈ 1.0 for sentiment); closed-form spectra reproduce tightly across resamples while
+trained adapters collapse to near-rank-1 action. Caveats: the **fable** leg is excluded
+pending a corpus-length fix (matched pool collapsed to 77/69 docs), and the Indic
+*story* legs' behavioral strength is instrument-degenerate (use spectra/coherence only).
+Full write-up: `Obsidian Vault/AI Research/SAS E1 — Results (Lean Run).md`.
 
 ## Quickstart (Colab / Kaggle)
 

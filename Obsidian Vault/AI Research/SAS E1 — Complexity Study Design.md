@@ -1,6 +1,6 @@
 # SAS Experiment 1 — Representation Complexity Study (Design)
 
-> **Status:** v1.4 — unified Lean run (EN + Indic) (2026-10-17) · implementation-ready
+> **Status:** v1.5 — Lean run executed and analyzed (2026-10-18) · results: [[SAS E1 — Results (Lean Run)]]
 > **Parent:** [[Style Adapter Steering — Model-Agnostic Narrative Style Control]]
 > **Companion research:** `SAS E1 — Prior Work Research (Steering Complexity).md`
 > **v1.0 changes vs v0.1:** effect-based complexity promoted to primary and parameter spectra require canonicalization (W2T); closed-form covariance-matching arm made a core falsification test (Representation Surgery/conceptors precedent); prompting baseline made mandatory (AxBench); ladder re-framed as falsifiable (refusal is documented rank-1); judge style-bias protocol added; seed/stability requirements raised; sample-size curve and separation pre-screen added; citation corrections to the parent proposal recorded in §11.
@@ -8,6 +8,7 @@
 > **v1.2 change (2026-10-13):** dataset licensing audit applied (§4.1) — toxicity primary switched to **Civil Comments (CC0-1.0)**; fable contrast and neutral probe pinned to **Wikipedia** (CC-BY-SA-3.0), with CNN/DailyMail (Apache-2.0) optional; CC-News dropped (404 / license unknown). No Lean dependency is gated or license-unknown.
 > **v1.3 change (2026-10-16):** Chandamama removed from scope entirely; **E1b Indic replication** added (§4.1b) — authentic Wikisource author corpora (Hindi: Premchand vs Prasad; Telugu: Gurajada vs Veeresalingam) + permissively licensed sentiment sets; new config `configs/lean-indic.yaml`; in-language prompts and a multilingual classifier override.
 > **v1.4 change (2026-10-17):** Indic attributes merged into the single `configs/lean.yaml` run — one setup, one run, no separate config; Lean is now **8 attributes**. Restrict with `--attr` when needed. (`configs/lean-indic.yaml` removed.)
+> **v1.5 change (2026-10-19):** Lean run complete (8 attributes, all stages, EN + Indic). Gates, complexity/behavioral results and caveats recorded in [[SAS E1 — Results (Lean Run)]]. Fable is excluded from conclusions pending a corpus-length fix (its matched stat pool collapsed to 77/69 docs).
 
 ---
 
@@ -36,7 +37,7 @@ h' = h + W h + b
 
 "Vector vs adapter" becomes a **rank sweep inside one parametrized family**, with closed-form and trained variants at each rank. Any gain from extra rank is then attributable, and the necessity question gets its cheapest possible falsification: a full-covariance closed-form operator that costs no training.
 
-**Execution mode.** Default = **Lean** (§2.2): 4 attributes, closed-form rank sweep, one trained low-rank arm fitted on cached activations, ~1.5–2 h GPU on a Colab/Kaggle T4. The Extended grid is documented but deferred.
+**Execution mode.** Default = **Lean** (§2.2): 8 attributes (EN ladder + Indic replication), closed-form rank sweep + trained low-rank arms fitted on cached activations; executed 2026-10-16 → 10-18 (~9 h GPU wall, generation-dominated, L4-class Colab). The Extended grid is documented but deferred. **Results:** [[SAS E1 — Results (Lean Run)]].
 
 ---
 
