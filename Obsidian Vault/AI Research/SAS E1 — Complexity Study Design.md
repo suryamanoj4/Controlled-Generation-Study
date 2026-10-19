@@ -203,7 +203,7 @@ Primary layer = 50% depth, fixed before results. Layer sweep {33%, 50%, 66%} on 
 | L1 | Sentiment | SST-2 positive (`nyu-mll/glue`, `sst2`) | SST-2 negative | neutral story starters | GLUE license "other" (per-task); ungated; standard research use |
 | L2 | Toxicity | Civil Comments (`google/civil_comments`) — toxic tail by label threshold | Civil Comments benign, matched | held-out toxic prompts | **CC0-1.0**; ungated |
 | L3 | Shakespeare | Shakespeare plays (Gutenberg) | Marlowe/Jonson/Webster plays (same era/genre) | neutral narrative prompts | US public domain; strip PG header; split **by play** |
-| L3 | Fable register | Moral Stories (`demelin/moral_stories`) | Wikipedia (`wikimedia/wikipedia`), length-matched; optional news variant CNN/DailyMail (`abisee/cnn_dailymail`, Apache-2.0) | neutral prompts | MIT; contrast CC-BY-SA-3.0 (attribution) |
+| L3 | Fable register | Moral Stories (`demelin/moral_stories`) | Wikipedia (`wikimedia/wikipedia`), lead chunks sentence-packed to ~20–55 words to match Moral Stories length; optional news variant CNN/DailyMail (`abisee/cnn_dailymail`, Apache-2.0) | neutral prompts | MIT; contrast CC-BY-SA-3.0 (attribution) |
 
 Optional Lean variant: **ToxiGen** (`toxigen/toxigen-data`) as a secondary implicit-toxicity arm — MIT + CDLA-Permissive (GitHub), research-use note, ungated (optional tracking form).
 

@@ -313,40 +313,109 @@ def prepare_civil_comments(cfg, force: bool = False) -> dict:
     return {"n_pos": len(pos), "n_neg": len(neg)}
 
 
+_WIKI_CHUNK_MIN_WORDS = 20
+_WIKI_CHUNK_MAX_WORDS = 55
+
+
+def _chunk_wikipedia_lead(text: str, min_words: int = _WIKI_CHUNK_MIN_WORDS,
+                          max_words: int = _WIKI_CHUNK_MAX_WORDS) -> list[str]:
+    """Chunk a Wikipedia lead into sentence-packed docs the length of a short fable.
+
+    The fable contrast must overlap Moral Stories in document length (~45 words/doc):
+    full lead paragraphs are ~3x longer, and the length-matching protocol
+    (cap = min of both sides' p90) then collapses the matched pool to tens of docs.
+    """
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text.split()) < min_words:
+        return []
+    parts: list[str] = []
+    for sentence in re.split(r"(?<=[.!?])\s+", text):
+        if len(sentence.split()) <= max_words:
+            parts.append(sentence)
+            continue
+        # long sentence: wrap at commas, then hard-wrap by words
+        for clause in re.split(r"(?<=,)\s+", sentence):
+            words = clause.split()
+            for i in range(0, len(words), max_words):
+                parts.append(" ".join(words[i:i + max_words]))
+    chunks: list[str] = []
+    cur: list[str] = []
+    n = 0
+    for part in parts:
+        w = len(part.split())
+        if cur and n + w > max_words:
+            chunks.append(" ".join(cur))
+            cur, n = [], 0
+        cur.append(part)
+        n += w
+    if cur:
+        tail = " ".join(cur)
+        if n >= min_words:
+            chunks.append(tail)
+        elif chunks and len(chunks[-1].split()) + n <= max_words:
+            chunks[-1] = chunks[-1] + " " + tail
+    return chunks
+
+
 def prepare_wikipedia(cfg, force: bool = False) -> dict:
     from datasets import load_dataset
 
     out_dir = ensure_dir(Path(get(cfg, "paths.data_processed", "data/processed")))
     contrast_path = out_dir / "wikipedia.jsonl"
     neutral_path = out_dir / "neutral_wikipedia.jsonl"
-    if contrast_path.exists() and neutral_path.exists() and not force:
+    need_contrast = force or not contrast_path.exists()
+    need_neutral = force or not neutral_path.exists()
+    if not need_contrast and not need_neutral:
         print("[wikipedia] cached")
         return {"skipped": True}
 
     n_contrast = int(get(cfg, "download.n_wikipedia", 5000))
     n_neutral = int(get(cfg, "download.n_wikipedia_neutral", 1000))
-    need = n_contrast + n_neutral
 
     ds = load_dataset("wikimedia/wikipedia", "20231101.en", split="train", streaming=True)
-    docs = []
+    contrast: list[dict] = []
+    neutral: list[dict] = []
+    article_idx = 0
     for row in ds:
         text = (row.get("text") or "").strip()
         words = len(text.split())
-        if 40 <= words <= 500:
-            docs.append({"text": text, "source": f"wikipedia:{row.get('title', '')}", "label": 0})
-        if len(docs) >= need:
+        if not (40 <= words <= 500):
+            continue
+        article_idx += 1
+        # the first n_neutral articles are reserved for the neutral corpus (their
+        # full leads also stay out of the contrast pool, matching the original range)
+        if article_idx <= n_neutral:
+            if need_neutral:
+                neutral.append({"text": text, "source": f"wikipedia:{row.get('title', '')}", "label": 0})
+            continue
+        if need_contrast and len(contrast) < n_contrast:
+            # short-fable-length chunks so contrast and Moral Stories distributions overlap
+            for chunk in _chunk_wikipedia_lead(text):
+                contrast.append({"text": chunk, "source": f"wikipedia:{row.get('title', '')}", "label": 0})
+                if len(contrast) >= n_contrast:
+                    break
+        if (not need_contrast or len(contrast) >= n_contrast) and (not need_neutral or len(neutral) >= n_neutral):
             break
-    if len(docs) < need:
-        print(f"[wikipedia] WARNING: {len(docs)} docs < {need} requested")
     del ds  # best-effort: release the streaming iterator at end of use
     import gc
 
     gc.collect()
-    neutral = docs[:n_neutral]
-    contrast = docs[n_neutral:]
-    write_jsonl(neutral_path, neutral)
-    write_jsonl(contrast_path, contrast)
-    print(f"[wikipedia] wrote {len(contrast)} contrast, {len(neutral)} neutral")
+    if need_neutral:
+        if len(neutral) < n_neutral:
+            print(f"[wikipedia] WARNING: {len(neutral)} neutral docs < {n_neutral} requested")
+        write_jsonl(neutral_path, neutral)
+        print(f"[wikipedia] wrote {len(neutral)} neutral")
+    else:
+        neutral = [None] * sum(1 for _ in open(neutral_path))  # count only (kept cached)
+        print("[wikipedia] neutral kept (cached)")
+    if need_contrast:
+        if len(contrast) < n_contrast:
+            print(f"[wikipedia] WARNING: {len(contrast)} contrast docs < {n_contrast} requested")
+        write_jsonl(contrast_path, contrast)
+        print(f"[wikipedia] wrote {len(contrast)} contrast (chunked to <={_WIKI_CHUNK_MAX_WORDS} words)")
+    else:
+        contrast = [None] * sum(1 for _ in open(contrast_path))  # count only (kept cached)
+        print("[wikipedia] contrast kept (cached)")
     return {"n_contrast": len(contrast), "n_neutral": len(neutral)}
 
 
