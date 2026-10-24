@@ -1,6 +1,6 @@
 # SAS Experiment 1 — Representation Complexity Study (Design)
 
-> **Status:** v1.5 — Lean run executed and analyzed (2026-10-18) · results: [[SAS E1 — Results (Lean Run)]]
+> **Status:** v1.6 — all 8 attributes complete, incl. rebuilt fable (2026-10-24) · results: [[SAS E1 — Results (Lean Run)]]
 > **Parent:** [[Style Adapter Steering — Model-Agnostic Narrative Style Control]]
 > **Companion research:** `SAS E1 — Prior Work Research (Steering Complexity).md`
 > **v1.0 changes vs v0.1:** effect-based complexity promoted to primary and parameter spectra require canonicalization (W2T); closed-form covariance-matching arm made a core falsification test (Representation Surgery/conceptors precedent); prompting baseline made mandatory (AxBench); ladder re-framed as falsifiable (refusal is documented rank-1); judge style-bias protocol added; seed/stability requirements raised; sample-size curve and separation pre-screen added; citation corrections to the parent proposal recorded in §11.
@@ -9,6 +9,7 @@
 > **v1.3 change (2026-10-16):** Chandamama removed from scope entirely; **E1b Indic replication** added (§4.1b) — authentic Wikisource author corpora (Hindi: Premchand vs Prasad; Telugu: Gurajada vs Veeresalingam) + permissively licensed sentiment sets; new config `configs/lean-indic.yaml`; in-language prompts and a multilingual classifier override.
 > **v1.4 change (2026-10-17):** Indic attributes merged into the single `configs/lean.yaml` run — one setup, one run, no separate config; Lean is now **8 attributes**. Restrict with `--attr` when needed. (`configs/lean-indic.yaml` removed.)
 > **v1.5 change (2026-10-19):** Lean run complete (8 attributes, all stages, EN + Indic). Gates, complexity/behavioral results and caveats recorded in [[SAS E1 — Results (Lean Run)]]. Fable is excluded from conclusions pending a corpus-length fix (its matched stat pool collapsed to 77/69 docs).
+> **v1.6 change (2026-10-24):** fable's Wikipedia contrast rebuilt from sentence-packed lead chunks (~20–55 words; fix `8f02c76`) and the leg re-run (1000/1000 matched docs). All 8 attributes are included; the corrected fable complexity is ~half the undersampled estimate, and G3 remains unassessable with the current α ceiling.
 
 ---
 

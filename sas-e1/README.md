@@ -16,17 +16,20 @@ All steerers are one nested family of linear operators on the residual stream:
 `h' = h + W h + b` (vector: `W = 0`; closed-form moment operator: `W* = Σ_P^{1/2} Σ_N^{-1/2} − I`,
 rank-truncated; trained adapter: `W = BA`).
 
-## Results (Lean run — 2026-10-18)
+## Results (Lean run — 2026-10-18, fable re-run 2026-10-24)
 
 The full Lean run completed (8 attributes, all stages; two resumable Colab sessions) and
 the analyzed outputs live in `artifacts/lean/analysis/` (`report.md`, `summary.json`).
 Headline: the complexity ladder is confirmed — `H_action(F16)` level means **L1 0.054 <
-L2 0.316 < L3 0.973**, and style legs are genuinely higher-rank (shakespeare erank ≈ 5.3
-vs ≈ 1.0 for sentiment); closed-form spectra reproduce tightly across resamples while
-trained adapters collapse to near-rank-1 action. Caveats: the **fable** leg is excluded
-pending a corpus-length fix (matched pool collapsed to 77/69 docs), and the Indic
-*story* legs' behavioral strength is instrument-degenerate (use spectra/coherence only).
-Full write-up: `Obsidian Vault/AI Research/SAS E1 — Results (Lean Run).md`.
+L2 0.316 < L3 0.849** — though L3 is heterogeneous (shakespeare erank ≈ 5.3, story_hi
+2.5, fable 1.7, story_te 1.3 vs ≈ 1.0 for sentiment); closed-form spectra reproduce
+tightly across resamples while trained adapters collapse to near-rank-1 action. Fable's
+contrast was rebuilt from sentence-packed Wikipedia chunks (1000/1000 matched docs;
+`8f02c76`) and re-run — its corrected complexity is about half the earlier undersampled
+estimate. Caveats: the Indic *story* legs' behavioral strength is instrument-degenerate
+(use spectra/coherence only) and G3 (complexity↔difficulty) is not reportable because
+the α ceiling is too low. Full write-up:
+`Obsidian Vault/AI Research/SAS E1 — Results (Lean Run).md`.
 
 ## Quickstart (Colab / Kaggle)
 
