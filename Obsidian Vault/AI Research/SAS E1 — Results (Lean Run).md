@@ -3,6 +3,7 @@
 > **Status:** complete — run 2026-10-18; fable rebuilt 2026-10-24 · **behavioral validity audit 2026-10-26 (this note corrected)** · 8 attributes · all stages completed
 > **Parent:** [[SAS E1 — Complexity Study Design]] · [[Style Adapter Steering — Model-Agnostic Narrative Style Control]]
 > **Artifacts:** `sas-e1/artifacts-lean/artifacts/lean/` (canonical merged copy) — tables in `analysis/report.md`, machine-readable `analysis/summary.json`, human-audit samples in `sas-e1/artifacts-lean/steering_samples.md`
+> **Successor direction:** [[SAS E2 — Low-Resource Style Steering Literature Review]]
 
 ## What ran
 
