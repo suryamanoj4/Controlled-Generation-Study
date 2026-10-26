@@ -11,6 +11,7 @@
 - [[SAS E1 — Prior Work Research (Steering Complexity)]] — Verified prior art on steering-representation complexity, evaluation protocols, and design implications for E1
 - [[SAS E1 — Results (Lean Run)]] — Lean run results (2026-10-18; fable rebuilt 2026-10-24; validity audit 2026-10-26): representation ladder confirmed (H: L1 0.05 < L2 0.32 < L3 0.85); Indic behavioral results withdrawn (no in-language generations); EN style needs judge validation
 - [[SAS E2 — Low-Resource Style Steering Literature Review]] — Study 2 grounding: framing archetypes, language-count norms (6–9 for style steering, 18–32 for language steering), experiment formats, and the unstudied Indic author-style gap
+- [[SAS E2 — Frozen Study Plan (Low-Resource Control & Style Steering)]] — Frozen 3-phase plan: Phase 1 language control (en/hi/bn/te/ta, FLORES vectors, steering vs prompting), Phase 2 author style, Phase 3 cross-lingual transfer; per-model complete runs (4B first, then 1.7B or a 7B/8B 4-bit)
 
 ## Extended Topics Covered in This Vault
 

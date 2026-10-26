@@ -1,6 +1,7 @@
 # SAS E2 — Low-Resource Style Steering: Literature Review
 
 > **Status:** review complete (2026-10-26) · scope: activation steering / style control in multilingual and low-resource settings · method: web search + arXiv/ACL Anthology abstracts & full texts (URLs below)
+> **Frozen plan:** [[SAS E2 — Frozen Study Plan (Low-Resource Control & Style Steering)]]
 > **Purpose:** establish the framing, language-count norms, and experiment-format conventions for the proposed Study 2 (low-resource style control, Indic core)
 
 ## 1. How papers frame this area — five recurring archetypes
