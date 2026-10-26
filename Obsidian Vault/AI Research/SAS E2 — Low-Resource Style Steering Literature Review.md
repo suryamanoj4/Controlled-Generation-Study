@@ -80,7 +80,42 @@
 
 No peer-reviewed paper or established repo with that exact name was found. Closest matches: (a) **StyleAdapter** — an *image* stylization model; (b) a Sakana AI-Scientist PDF "multi-style adapter" for LMs (not peer-reviewed — do not cite); (c) the style-vector/steering literature above. If you have a specific URL/repo for StyleAdapterLM, share it and it can be assessed separately.
 
-## 6. References (verified abstracts/full texts)
+## 6. Implementation audit — English author-style steering vs our harness
+
+| Work | Mechanism | Model / site | Strength control | Evaluation | Data | Same family as ours? |
+|---|---|---|---|---|---|---|
+| **Style Vectors** (Konen et al., EACL 2024; code MIT) | add style vector to hidden states (activation-based; also a trained variant) | Alpaca-7B; multiple layers | layer sweep, scale sweep | style classifiers, probing study, human inspection, prompting baseline | Yelp, Shakespeare, GoEmotions | ✅ **yes — same as A** (vector addition); trained variant ≈ our C family |
+| **StyleVector** (Zhang et al., 2025) | training-free style vector in activation space, content/style disentanglement | LLM (7B-class); layer injection | α | PEFT/RAG baselines; 8% relative gain, 1700× less storage | personalized writing samples | ✅ yes (A + disentanglement) |
+| **Ionio author-style pipeline** (2026, *blog — not peer-reviewed*) | `v_author = mean(h_author) − mean(h_all)`, L2-normalize, `h' = h + α v` | GPT-2; 7 layers from output side | α ∈ {0.5, 1, 2, 4} | paired baseline vs steered; LLM judge + MiniLM embedding similarity | 1.5k **LLM-synthesized** style pairs (circularity caveat) | ✅ **essentially identical to our A arm** |
+| **CAA** (Rimsky et al., 2024) + IBM `activation-steering`, Microsoft `llm-steer-instruct` | contrastive activation addition; residual-stream hooks | various | α, layers | task metrics | contrastive pairs | ✅ yes (reference implementations/libraries) |
+| **StyleMC** (Khan et al., 2023/24) | contrastively trained stylometric representation + **sequence-level discriminative re-scoring at decoding** | author-adapted LM | energy weight | style/fluency/anonymization | small author samples | ❌ **no** — decoding-time control, not activation addition |
+| **Authorship style transfer with policy optimization** (2024) | RL / policy optimization | fine-tuned LM | training | style + content metrics | author corpora | ❌ no — training-based |
+
+**Conclusion:** for *training-free style steering*, the reference implementations (Style Vectors, StyleVector, Ionio, CAA) are the **same mechanism we already have** — mean-difference vector injected into the residual stream at a chosen layer, with layer and α sweeps. Our **closed-form F-r arms are an extension** beyond that literature (they only use mean vectors), and our evaluation harness (classifier + PPL + content-sim) is compatible. Two gaps to close before reuse: add a **judge/human validation** (their standard) and **language-fidelity/script gate** (our lesson). "StyleAdapter" has **no LM implementation**; the image model and the Sakana AI-Scientist PDF are not usable references.
+
+## 7. Recommended phased Study 2 plan
+
+**Phase A — LRL control + steering vs prompting (fast, 1–2 weeks).**
+- Languages (4): **English (anchor), Hindi, Telugu, Swahili**.
+- Models (2): Qwen2.5-7B-Instruct + one of Gemma-2-9B-it / Aya-23-8B; BLOOMZ-1b7 as weak-competence anchor.
+- Conditions: baseline, DiffMean vector, closed-form rank-4, prompting (English instruction vs native instruction).
+- Metrics: language-forcing rate, semantic relevance (judge), **script fidelity gate**, fluency; 70–100 prompts.
+- Claim: controllability is predicted by base-model competence, not language identity.
+
+**Phase B — author-style steering (Indic core).**
+- Languages: English (Shakespeare vs other drama), **Hindi (Premchand vs Prasad)**, **Telugu (Gurajada vs Veerasalingam)**; optional Bengali (Tagore vs Sarat Chandra).
+- Conditions: vector (CAA/DiffMean), closed-form rank-4, in-language prompting; α ∈ {0.5, 1, 2, 4}; 2–3 layers.
+- Metrics: authorship classifier **validated on generations**, judge (style/coherence/language), human subset (native speakers), LaBSE content preservation, diversity.
+- Advantage over the English literature: **authentic public-domain corpora** instead of LLM-synthesized style pairs.
+
+**Phase C — cross-lingual style transfer (the novel core).**
+- Source × target matrix: EN→HI, EN→TE, HI→TE (and reverse), monolingual vs cross-lingual directions.
+- Decompose directions into the mean of other-language directions vs residual (Liu et al. method), with random-vector controls and McNemar/BH tests.
+- Claim: style directions have a shared cross-lingual component even when the surface style is language-specific; transfer strength tracks model competence.
+
+**Scope guards:** 4–6 languages total, 2–3 models, one attribute per language pair, 3–5 α values, 2–3 layers, 100 prompts. Do not combine all phases in one run; A is the go/no-go screen, B establishes the style effect, C is the paper's novelty.
+
+## 8. References (verified abstracts/full texts)
 
 - Gurgurov et al. **CLaS-Bench: A Cross-Lingual Alignment and Steering Benchmark.** Findings ACL 2026. https://aclanthology.org/2026.findings-acl.1086/
 - Cegin, Gurgurov, Al Ghussin, Ostermann. **Want Better Synthetic Data? Steer It: Activation Steering for Low-Resource Language Generation.** EMNLP 2026. https://arxiv.org/abs/2606.18389
@@ -96,3 +131,10 @@ No peer-reviewed paper or established repo with that exact name was found. Close
 - ReCoVeR (language steering, 18 languages). Findings EMNLP 2025. https://doi.org/10.18653/v1/2025.findings-emnlp.1056
 - Briakou et al. **XFORMAL: A Benchmark for Multilingual Formality Style Transfer.** NAACL 2021. (3 languages + English)
 - Bartoszcze et al. **Representation Engineering for Large-Language Models: Survey and Research Challenges.** arXiv 2502.17601. https://arxiv.org/abs/2502.17601
+- Konen et al. code: https://github.com/DLR-SC/style-vectors-for-steering-llms
+- Zhang et al. **Personalized Text Generation with Contrastive Activation Steering (StyleVector).** arXiv 2503.05213. https://arxiv.org/abs/2503.05213
+- Rimsky et al. **Steering Llama 2 via Contrastive Activation Addition (CAA).** arXiv 2312.06681. https://arxiv.org/abs/2312.06681
+- Patel. **Author-Style Steering via Contrastive Activation Vectors.** Ionio blog, Jan 2026 — *not peer-reviewed*. https://research.ionio.ai/posts/2025/author-style-steering-activation-vectors
+- IBM. **activation-steering library.** https://github.com/IBM/activation-steering
+- Stolfo et al. **Improving Instruction-Following in Language Models through Activation Steering.** ICLR 2025. https://github.com/microsoft/llm-steer-instruct
+- **Authorship Style Transfer with Policy Optimization.** arXiv 2403.08043. https://arxiv.org/abs/2403.08043
