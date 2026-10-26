@@ -7,9 +7,9 @@
 - [[Agent Based Story Generation]] — Multi-agent systems, orchestration frameworks, human-AI co-creation, simulation-based narrative, agent communication, self-optimization, memory architectures, interactive fiction, cost benchmarks
 - [[Agent Story Generation — Extended Research Report]] — Detailed supplementary findings on agent-based story generation
 - [[Style Adapter Steering — Model-Agnostic Narrative Style Control]] — Research proposal: self-aligning, pluggable style adapters for inference-time author-style control (no fine-tuning, no RAG); attribute-complexity & language-representation axes; Hindi/Telugu author-style replication as the low-resource example
-- [[SAS E1 — Complexity Study Design]] — Experiment 1 design (v1.6): complexity ladder vs. adapter necessity, probes/metrics/gates, unified EN + Indic Lean run, dataset licensing
+- [[SAS E1 — Complexity Study Design]] — Experiment 1 design (v1.7): complexity ladder vs. adapter necessity, probes/metrics/gates, unified EN + Indic Lean run, dataset licensing
 - [[SAS E1 — Prior Work Research (Steering Complexity)]] — Verified prior art on steering-representation complexity, evaluation protocols, and design implications for E1
-- [[SAS E1 — Results (Lean Run)]] — Lean run results (2026-10-18; fable rebuilt 2026-10-24, 8 attributes): ladder confirmed (H: L1 0.05 < L2 0.32 < L3 0.85), closed-form spectra reproducible, trained adapters act rank-1; G3 not reportable (α ceiling)
+- [[SAS E1 — Results (Lean Run)]] — Lean run results (2026-10-18; fable rebuilt 2026-10-24; validity audit 2026-10-26): representation ladder confirmed (H: L1 0.05 < L2 0.32 < L3 0.85); Indic behavioral results withdrawn (no in-language generations); EN style needs judge validation
 
 ## Extended Topics Covered in This Vault
 

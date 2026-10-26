@@ -1,6 +1,6 @@
 # SAS Experiment 1 — Representation Complexity Study (Design)
 
-> **Status:** v1.6 — all 8 attributes complete, incl. rebuilt fable (2026-10-24) · results: [[SAS E1 — Results (Lean Run)]]
+> **Status:** v1.7 — results corrected after generation audit (2026-10-26) · results: [[SAS E1 — Results (Lean Run)]]
 > **Parent:** [[Style Adapter Steering — Model-Agnostic Narrative Style Control]]
 > **Companion research:** `SAS E1 — Prior Work Research (Steering Complexity).md`
 > **v1.0 changes vs v0.1:** effect-based complexity promoted to primary and parameter spectra require canonicalization (W2T); closed-form covariance-matching arm made a core falsification test (Representation Surgery/conceptors precedent); prompting baseline made mandatory (AxBench); ladder re-framed as falsifiable (refusal is documented rank-1); judge style-bias protocol added; seed/stability requirements raised; sample-size curve and separation pre-screen added; citation corrections to the parent proposal recorded in §11.
@@ -10,6 +10,7 @@
 > **v1.4 change (2026-10-17):** Indic attributes merged into the single `configs/lean.yaml` run — one setup, one run, no separate config; Lean is now **8 attributes**. Restrict with `--attr` when needed. (`configs/lean-indic.yaml` removed.)
 > **v1.5 change (2026-10-19):** Lean run complete (8 attributes, all stages, EN + Indic). Gates, complexity/behavioral results and caveats recorded in [[SAS E1 — Results (Lean Run)]]. Fable is excluded from conclusions pending a corpus-length fix (its matched stat pool collapsed to 77/69 docs).
 > **v1.6 change (2026-10-24):** fable's Wikipedia contrast rebuilt from sentence-packed lead chunks (~20–55 words; fix `8f02c76`) and the leg re-run (1000/1000 matched docs). All 8 attributes are included; the corrected fable complexity is ~half the undersampled estimate, and G3 remains unassessable with the current α ceiling.
+> **v1.7 change (2026-10-26):** post-run generation audit — BLOOMZ-1b7 produced ~0% in-language Indic output (0–5/2640; 34–56% empty) and human inspection at m=2 showed no perceptible style shift on the EN style legs. All Indic behavioral results are withdrawn (representation results stand); behavioral claims now require an automated in-language gate plus human/judge validation, and the Indic generation setup must be fixed before its eval is re-run.
 
 ---
 

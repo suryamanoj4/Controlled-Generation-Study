@@ -16,7 +16,7 @@ All steerers are one nested family of linear operators on the residual stream:
 `h' = h + W h + b` (vector: `W = 0`; closed-form moment operator: `W* = Σ_P^{1/2} Σ_N^{-1/2} − I`,
 rank-truncated; trained adapter: `W = BA`).
 
-## Results (Lean run — 2026-10-18, fable re-run 2026-10-24)
+## Results (Lean run — 2026-10-18, fable re-run 2026-10-24, validity audit 2026-10-26)
 
 The full Lean run completed (8 attributes, all stages; two resumable Colab sessions) and
 the analyzed outputs live in `artifacts/lean/analysis/` (`report.md`, `summary.json`).
@@ -26,9 +26,15 @@ L2 0.316 < L3 0.849** — though L3 is heterogeneous (shakespeare erank ≈ 5.3,
 tightly across resamples while trained adapters collapse to near-rank-1 action. Fable's
 contrast was rebuilt from sentence-packed Wikipedia chunks (1000/1000 matched docs;
 `8f02c76`) and re-run — its corrected complexity is about half the earlier undersampled
-estimate. Caveats: the Indic *story* legs' behavioral strength is instrument-degenerate
-(use spectra/coherence only) and G3 (complexity↔difficulty) is not reportable because
-the α ceiling is too low. Full write-up:
+estimate.
+
+**⚠️ Behavioral validity correction (2026-10-26):** a generation audit found the model
+produced **~0% in-language Indic output** (0–5 / 2640; 34–56% empty), so **all Indic
+behavioral results are withdrawn** (representation results remain valid). A human check
+also shows no perceptible Shakespearean register at m = 2 and fable degeneration.
+Classifier strength alone is not sufficient evidence; behavioral claims now require an
+in-language gate plus human/judge validation. G3 (complexity↔difficulty) remains not
+reportable (EN legs never reach the strength target at m ≤ 4). Full write-up:
 `Obsidian Vault/AI Research/SAS E1 — Results (Lean Run).md`.
 
 ## Quickstart (Colab / Kaggle)
