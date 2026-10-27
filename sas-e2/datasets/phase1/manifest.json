@@ -1,0 +1,324 @@
+{
+  "dataset": "SAS E2 Phase 1 — Sentiment (L1), run-ready",
+  "version": "v1",
+  "created": "2026-10-27",
+  "languages": [
+    "en",
+    "hi",
+    "bn",
+    "te",
+    "ta"
+  ],
+  "sentiment": {
+    "matched_class_counts": {
+      "positive": 580,
+      "negative": 572,
+      "total": 1152
+    },
+    "split_rule": {
+      "stat": "250 per class (matched across languages)",
+      "clf_train": "per-language maximum (en 2000/class; indic 250/class)",
+      "clf_eval": "per-language maximum (en 500/class; indic 72/class)"
+    },
+    "sources": {
+      "en": {
+        "dataset": "Amazon Polarity via fancyzhx/amazon_polarity (test split)",
+        "license": "Apache-2.0",
+        "available": "400,000 test rows (200k pos / 200k neg)",
+        "preprocessing": "document = title + first 20 content words; deduplicated; sampled to matched class counts (seed 42)",
+        "note": "SST-2 was evaluated and rejected: its sentence lengths (median 7 words) do not match the Indic reviews (17-25 words). No SST-2 data is included in this dataset."
+      },
+      "indic": {
+        "dataset": "ai4bharat/IndicSentiment (test + validation)",
+        "license": "original dataset card: no license declared; mteb/IndicSentiment tags CC0-1.0",
+        "available": "1,000 test + 156 validation per language",
+        "preprocessing": "2 null labels + 2 duplicate texts dropped; whitespace normalized"
+      }
+    },
+    "languages": {
+      "en": {
+        "files": {
+          "stat": {
+            "path": "sentiment/en/stat.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 24.0,
+            "p90_words": 28,
+            "sha256": "a8f68765f514d59c4f5a2ee46e136662ad1383bdc85695221023ee090afbfbc7"
+          },
+          "clf_train": {
+            "path": "sentiment/en/clf_train.jsonl",
+            "n": 4000,
+            "pos": 2000,
+            "neg": 2000,
+            "median_words": 24.0,
+            "p90_words": 28,
+            "sha256": "ba4caf314ed5cefd654c0ce9312bfdeebde08d67fc22f920e48f11ec5ab4b111"
+          },
+          "clf_eval": {
+            "path": "sentiment/en/clf_eval.jsonl",
+            "n": 1000,
+            "pos": 500,
+            "neg": 500,
+            "median_words": 24.0,
+            "p90_words": 28,
+            "sha256": "821b9eb1e180aba334a8fd2f4ea874b6e8d3db3019b421831eb20d1064a4a5d4"
+          }
+        }
+      },
+      "hi": {
+        "files": {
+          "stat": {
+            "path": "sentiment/hi/stat.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 25.0,
+            "p90_words": 44,
+            "sha256": "4e84a38cfd49b946d65d7926767391c7b6b065bd81842fbaa8d25d90192c73fa"
+          },
+          "clf_train": {
+            "path": "sentiment/hi/clf_train.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 25.0,
+            "p90_words": 46,
+            "sha256": "51766c07470c4d868828ba1fe109c67fa3045c9bdd213a056d69c19266d070ee"
+          },
+          "clf_eval": {
+            "path": "sentiment/hi/clf_eval.jsonl",
+            "n": 152,
+            "pos": 80,
+            "neg": 72,
+            "median_words": 25.0,
+            "p90_words": 41,
+            "sha256": "f0d9eb5fdac6000c2d0306256b2dff1a1ae8451c9b73b23327242a23704ba5be"
+          }
+        }
+      },
+      "bn": {
+        "files": {
+          "stat": {
+            "path": "sentiment/bn/stat.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 20.0,
+            "p90_words": 34,
+            "sha256": "fe757db64cf56dfceae4e995fcfb5bf7ba2182bae1ebea5d80e06a9d7c3f8525"
+          },
+          "clf_train": {
+            "path": "sentiment/bn/clf_train.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 20.0,
+            "p90_words": 35,
+            "sha256": "58a90aa1b611f6729e85ae4dc133857a153df1ffe13f6727b166703cf1770ebb"
+          },
+          "clf_eval": {
+            "path": "sentiment/bn/clf_eval.jsonl",
+            "n": 152,
+            "pos": 80,
+            "neg": 72,
+            "median_words": 18.0,
+            "p90_words": 31,
+            "sha256": "7f5efbef186157dd59012b74d68ee7f9096b98a1bdbe49c00041ff81357108eb"
+          }
+        }
+      },
+      "te": {
+        "files": {
+          "stat": {
+            "path": "sentiment/te/stat.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 17.0,
+            "p90_words": 30,
+            "sha256": "208e50dbcfb483654977d74d78f8dc32ed4e0e90e6da06e7e249e804e375ceb9"
+          },
+          "clf_train": {
+            "path": "sentiment/te/clf_train.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 17.0,
+            "p90_words": 31,
+            "sha256": "5a73bef59b3a59a2eeddef78e53c054304a67b64783b1011bfd5bde7985d1604"
+          },
+          "clf_eval": {
+            "path": "sentiment/te/clf_eval.jsonl",
+            "n": 152,
+            "pos": 80,
+            "neg": 72,
+            "median_words": 17.0,
+            "p90_words": 27,
+            "sha256": "abffa427d248af59ca15bc8503e789ff996e4d0681d9c622eb92a8618b2e7e17"
+          }
+        }
+      },
+      "ta": {
+        "files": {
+          "stat": {
+            "path": "sentiment/ta/stat.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 17.0,
+            "p90_words": 28,
+            "sha256": "677c138ce2ef0a618136afcec228bf4556151bc841212f5dd6eb4b5e8565defd"
+          },
+          "clf_train": {
+            "path": "sentiment/ta/clf_train.jsonl",
+            "n": 500,
+            "pos": 250,
+            "neg": 250,
+            "median_words": 17.0,
+            "p90_words": 29,
+            "sha256": "d06e4432140f7e8809de4b92ee9813f88bd68e2440167281fcb5f7b81ce453db"
+          },
+          "clf_eval": {
+            "path": "sentiment/ta/clf_eval.jsonl",
+            "n": 152,
+            "pos": 80,
+            "neg": 72,
+            "median_words": 16.0,
+            "p90_words": 27,
+            "sha256": "eed4bd77a526356bfe5ef19bf644f10a8ea3a9ddee41a97686d8e4ce367acab8"
+          }
+        }
+      }
+    },
+    "prompts": {
+      "source": "in-house SAS E2 v1, 30 review topics",
+      "license": "CC-BY-4.0 (this repo)",
+      "files": {
+        "en": {
+          "path": "sentiment/prompts/en.jsonl",
+          "n": 30,
+          "script_ratio": 1.0,
+          "sha256": "efc5a31c58c3d2cba727441d23b11f28f065a516ee90c8ff36ee529a6a75ad9e"
+        },
+        "hi": {
+          "path": "sentiment/prompts/hi.jsonl",
+          "n": 30,
+          "script_ratio": 1.0,
+          "sha256": "8a93fe6c32420944ffc48393878722b4d37e4d791f4fdbc1d9a6b9a0b9886140"
+        },
+        "bn": {
+          "path": "sentiment/prompts/bn.jsonl",
+          "n": 30,
+          "script_ratio": 1.0,
+          "sha256": "b30cd93dfc976535e1936568ee7d04ffee4759726c882edc27b35fc0ed37ca87"
+        },
+        "te": {
+          "path": "sentiment/prompts/te.jsonl",
+          "n": 30,
+          "script_ratio": 1.0,
+          "sha256": "fc801b033417486afc6214fbf9cafee23edc6096e5c047f37a51f3639edf5dea"
+        },
+        "ta": {
+          "path": "sentiment/prompts/ta.jsonl",
+          "n": 30,
+          "script_ratio": 1.0,
+          "sha256": "de3880e3c6ca505633f733583b22db44902480a244c1ffcca2e24b86fd859a0c"
+        }
+      },
+      "neutral_template": "see sentiment/prompts/prompting_templates.json",
+      "verification": "draft; native-speaker verification recommended, especially bn/ta"
+    },
+    "classifier_sizes": {
+      "en": {
+        "clf_train": "2000/class",
+        "clf_eval": "500/class",
+        "note": "larger English instrument; disjoint from stat"
+      },
+      "indic": {
+        "clf_train": "250/class",
+        "clf_eval": "72/class",
+        "note": "corpus ceiling"
+      }
+    }
+  },
+  "diagnostics": {
+    "flores200": {
+      "source": "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz",
+      "license": "CC-BY-SA-4.0",
+      "files": {
+        "en": {
+          "dev": {
+            "path": "flores200/en.dev.jsonl",
+            "n": 997,
+            "sha256": "c6def794d398139bd2a147c7d7c26bb385b1980dbf727ff6ad542746f9713688"
+          },
+          "devtest": {
+            "path": "flores200/en.devtest.jsonl",
+            "n": 1012,
+            "sha256": "a796bac6694efbef91fae69337ee1b3b2fe7dfabfd3320a0a5931037480963d2"
+          }
+        },
+        "hi": {
+          "dev": {
+            "path": "flores200/hi.dev.jsonl",
+            "n": 997,
+            "sha256": "85c6e04ba66505c570d046e8741797ee7e9f5e8bd460a7034fb3f3984ae85c58"
+          },
+          "devtest": {
+            "path": "flores200/hi.devtest.jsonl",
+            "n": 1012,
+            "sha256": "83dceadd9cb58fd2fbae2c5acbc4669a31732aa00441077e6211f48ed9cd0f85"
+          }
+        },
+        "bn": {
+          "dev": {
+            "path": "flores200/bn.dev.jsonl",
+            "n": 997,
+            "sha256": "27b74c75352bd23339a24bd4b8a0d9dee4bf9aaaa74724cdcbe92c2e6218b8f4"
+          },
+          "devtest": {
+            "path": "flores200/bn.devtest.jsonl",
+            "n": 1012,
+            "sha256": "b5451702884a24eed82764a592f877af0b1bc6d672e65a9f293fd3cfa338db89"
+          }
+        },
+        "te": {
+          "dev": {
+            "path": "flores200/te.dev.jsonl",
+            "n": 997,
+            "sha256": "b2d25b62f362d280c0d5b0c4da4b59fcc4ad03b4b771dcd5e2fbeeb3d76a6a3c"
+          },
+          "devtest": {
+            "path": "flores200/te.devtest.jsonl",
+            "n": 1012,
+            "sha256": "9c54c158d65ffa6d1b051201463a30e7f76eb5eb8516e4b0d833e301e3e0d5cf"
+          }
+        },
+        "ta": {
+          "dev": {
+            "path": "flores200/ta.dev.jsonl",
+            "n": 997,
+            "sha256": "f292346d8a020918900b53386f54fad3141f7e453789fd1806e459b1a2425385"
+          },
+          "devtest": {
+            "path": "flores200/ta.devtest.jsonl",
+            "n": 1012,
+            "sha256": "c38eba8a9b94ff380268f4a4794b8c71880825a291a417907b201bc293985be9"
+          }
+        }
+      },
+      "note": "dev for layer/alpha validation; devtest for language-vector fitting / competence proxies"
+    }
+  },
+  "aux": {
+    "generic_prompts_en": "aux/generic_prompts_en.jsonl"
+  },
+  "notes": [
+    "English is sampled down to the same per-class size as the Indic languages so the complexity ladder is not confounded by sample size.",
+    "Indic data is translated product/hotel reviews; valid for sentiment (L1), not for style (L2/L3).",
+    "All prompts are in-language; the prompting baseline uses positive/negative templates from prompting_templates.json.",
+    "Splits are disjoint by text; verify any downstream relabeling before use."
+  ]
+}

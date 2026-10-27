@@ -1,0 +1,100 @@
+{"id": "p001", "category": "everyday_life", "prompt": "Describe your ideal morning routine and explain why it works for you."}
+{"id": "p002", "category": "everyday_life", "prompt": "What small habit improves your day the most, and why?"}
+{"id": "p003", "category": "everyday_life", "prompt": "How do you organize a busy week so that you still have free time?"}
+{"id": "p004", "category": "everyday_life", "prompt": "What makes a house feel like a home?"}
+{"id": "p005", "category": "everyday_life", "prompt": "Describe a meal you enjoy preparing and what makes it special."}
+{"id": "p006", "category": "everyday_life", "prompt": "How do you decide what to do when you have an unexpected free afternoon?"}
+{"id": "p007", "category": "everyday_life", "prompt": "What is one everyday skill you think everyone should learn?"}
+{"id": "p008", "category": "everyday_life", "prompt": "How has your daily routine changed in the last few years?"}
+{"id": "p009", "category": "everyday_life", "prompt": "What do you do to relax after a long day?"}
+{"id": "p010", "category": "everyday_life", "prompt": "Describe a place in your neighbourhood where you like to spend time."}
+{"id": "p011", "category": "nature_environment", "prompt": "Why is it important to protect local trees and green spaces?"}
+{"id": "p012", "category": "nature_environment", "prompt": "Describe how the weather affects the mood of a city."}
+{"id": "p013", "category": "nature_environment", "prompt": "What can individuals do to reduce waste in their daily lives?"}
+{"id": "p014", "category": "nature_environment", "prompt": "How would you explain the importance of clean water to a child?"}
+{"id": "p015", "category": "nature_environment", "prompt": "What is your favourite season, and what makes it special?"}
+{"id": "p016", "category": "nature_environment", "prompt": "How do rivers and lakes shape the places people live?"}
+{"id": "p017", "category": "nature_environment", "prompt": "Why do some animals migrate, and how do they find their way?"}
+{"id": "p018", "category": "nature_environment", "prompt": "What are the benefits of spending time outdoors?"}
+{"id": "p019", "category": "nature_environment", "prompt": "How can a community prepare for extreme weather?"}
+{"id": "p020", "category": "nature_environment", "prompt": "Describe a natural place you would like to visit and why."}
+{"id": "p021", "category": "science_technology", "prompt": "How would you explain the water cycle to a child?"}
+{"id": "p022", "category": "science_technology", "prompt": "What is one technology that has changed daily life the most, and why?"}
+{"id": "p023", "category": "science_technology", "prompt": "How can technology help people with disabilities?"}
+{"id": "p024", "category": "science_technology", "prompt": "What are the benefits and risks of using artificial intelligence in schools?"}
+{"id": "p025", "category": "science_technology", "prompt": "Why is it important to check information before sharing it online?"}
+{"id": "p026", "category": "science_technology", "prompt": "Describe a scientific discovery that you find fascinating."}
+{"id": "p027", "category": "science_technology", "prompt": "How do vaccines help protect communities?"}
+{"id": "p028", "category": "science_technology", "prompt": "What role do satellites play in modern life?"}
+{"id": "p029", "category": "science_technology", "prompt": "How can cities use technology to improve public transport?"}
+{"id": "p030", "category": "science_technology", "prompt": "What questions would you ask before trusting a new app with your data?"}
+{"id": "p031", "category": "education_learning", "prompt": "How should schools balance exams and creative work?"}
+{"id": "p032", "category": "education_learning", "prompt": "What makes a good teacher?"}
+{"id": "p033", "category": "education_learning", "prompt": "Why is learning a new language useful for adults?"}
+{"id": "p034", "category": "education_learning", "prompt": "Describe a subject you wish you had learned earlier."}
+{"id": "p035", "category": "education_learning", "prompt": "How can students learn better from their mistakes?"}
+{"id": "p036", "category": "education_learning", "prompt": "What role should libraries play in a community?"}
+{"id": "p037", "category": "education_learning", "prompt": "How can online learning be improved?"}
+{"id": "p038", "category": "education_learning", "prompt": "What is the value of learning history?"}
+{"id": "p039", "category": "education_learning", "prompt": "How would you design a school day that helps students focus?"}
+{"id": "p040", "category": "education_learning", "prompt": "What is one book that changed how you think, and why?"}
+{"id": "p041", "category": "work_economy", "prompt": "What does a healthy workday look like to you?"}
+{"id": "p042", "category": "work_economy", "prompt": "How can small businesses compete with large companies?"}
+{"id": "p043", "category": "work_economy", "prompt": "What skills will be most valuable in the next ten years?"}
+{"id": "p044", "category": "work_economy", "prompt": "Describe a job you would enjoy doing for a year."}
+{"id": "p045", "category": "work_economy", "prompt": "How should companies support employees who work from home?"}
+{"id": "p046", "category": "work_economy", "prompt": "What are the advantages and disadvantages of a four-day work week?"}
+{"id": "p047", "category": "work_economy", "prompt": "How can a city create more opportunities for young people?"}
+{"id": "p048", "category": "work_economy", "prompt": "Why do people save money, and what makes saving easier?"}
+{"id": "p049", "category": "work_economy", "prompt": "Describe a fair way to divide household chores."}
+{"id": "p050", "category": "work_economy", "prompt": "What makes a good team?"}
+{"id": "p051", "category": "health_wellbeing", "prompt": "What are simple ways to stay healthy during a busy week?"}
+{"id": "p052", "category": "health_wellbeing", "prompt": "Why is sleep important, and how can people improve it?"}
+{"id": "p053", "category": "health_wellbeing", "prompt": "How can communities support mental health?"}
+{"id": "p054", "category": "health_wellbeing", "prompt": "Describe a hobby that helps you feel calm."}
+{"id": "p055", "category": "health_wellbeing", "prompt": "What are the benefits of walking every day?"}
+{"id": "p056", "category": "health_wellbeing", "prompt": "How should people balance screen time and rest?"}
+{"id": "p057", "category": "health_wellbeing", "prompt": "What makes a friendship supportive?"}
+{"id": "p058", "category": "health_wellbeing", "prompt": "How can families encourage healthy eating habits?"}
+{"id": "p059", "category": "health_wellbeing", "prompt": "Why is it important to take breaks during work?"}
+{"id": "p060", "category": "health_wellbeing", "prompt": "Describe a healthy way to handle stress."}
+{"id": "p061", "category": "culture_arts", "prompt": "Why do people tell stories, and what do stories do for a community?"}
+{"id": "p062", "category": "culture_arts", "prompt": "If you could preserve one local tradition, what would it be and why?"}
+{"id": "p063", "category": "culture_arts", "prompt": "What makes a song or a piece of music memorable?"}
+{"id": "p064", "category": "culture_arts", "prompt": "How do festivals bring people together?"}
+{"id": "p065", "category": "culture_arts", "prompt": "Describe a film or play that stayed with you."}
+{"id": "p066", "category": "culture_arts", "prompt": "Why is it important to support local artists?"}
+{"id": "p067", "category": "culture_arts", "prompt": "How does language shape the way people see the world?"}
+{"id": "p068", "category": "culture_arts", "prompt": "What can museums do to make history interesting for young people?"}
+{"id": "p069", "category": "culture_arts", "prompt": "Describe a craft you would like to learn."}
+{"id": "p070", "category": "culture_arts", "prompt": "How can food tell the story of a place?"}
+{"id": "p071", "category": "travel_places", "prompt": "What makes a city pleasant to live in? Explain with examples."}
+{"id": "p072", "category": "travel_places", "prompt": "Describe a journey that changed your perspective."}
+{"id": "p073", "category": "travel_places", "prompt": "What should a visitor experience first in your region?"}
+{"id": "p074", "category": "travel_places", "prompt": "How can tourism help local communities without harming them?"}
+{"id": "p075", "category": "travel_places", "prompt": "What is the difference between a tourist and a traveller?"}
+{"id": "p076", "category": "travel_places", "prompt": "Describe a place where you feel calm."}
+{"id": "p077", "category": "travel_places", "prompt": "How has travel changed because of technology?"}
+{"id": "p078", "category": "travel_places", "prompt": "What makes public transport good?"}
+{"id": "p079", "category": "travel_places", "prompt": "If you could live in another country for a year, where would you go and why?"}
+{"id": "p080", "category": "travel_places", "prompt": "Describe a landscape you would like to see."}
+{"id": "p081", "category": "community_relationships", "prompt": "What makes a strong neighbourhood?"}
+{"id": "p082", "category": "community_relationships", "prompt": "How can people resolve disagreements peacefully?"}
+{"id": "p083", "category": "community_relationships", "prompt": "Why is volunteering important?"}
+{"id": "p084", "category": "community_relationships", "prompt": "Describe a person who influenced you and how."}
+{"id": "p085", "category": "community_relationships", "prompt": "How can older and younger people learn from each other?"}
+{"id": "p086", "category": "community_relationships", "prompt": "What are the qualities of a good friend?"}
+{"id": "p087", "category": "community_relationships", "prompt": "How can a community welcome newcomers?"}
+{"id": "p088", "category": "community_relationships", "prompt": "What role do neighbours play in daily life?"}
+{"id": "p089", "category": "community_relationships", "prompt": "How should people balance time with family and time alone?"}
+{"id": "p090", "category": "community_relationships", "prompt": "Describe a tradition that brings your family together."}
+{"id": "p091", "category": "ethics_decisions", "prompt": "How should a community decide how to spend a shared budget?"}
+{"id": "p092", "category": "ethics_decisions", "prompt": "What does fairness mean in everyday life?"}
+{"id": "p093", "category": "ethics_decisions", "prompt": "When is it important to speak up, even if it is difficult?"}
+{"id": "p094", "category": "ethics_decisions", "prompt": "How should people balance privacy and safety?"}
+{"id": "p095", "category": "ethics_decisions", "prompt": "What responsibilities do people have to future generations?"}
+{"id": "p096", "category": "ethics_decisions", "prompt": "Describe a difficult decision you made and what you learned."}
+{"id": "p097", "category": "ethics_decisions", "prompt": "Should people be required to help their neighbours? Why or why not?"}
+{"id": "p098", "category": "ethics_decisions", "prompt": "How can rules be fair to everyone?"}
+{"id": "p099", "category": "ethics_decisions", "prompt": "What is the difference between a mistake and a failure?"}
+{"id": "p100", "category": "ethics_decisions", "prompt": "If you could change one rule in your community, what would it be and why?"}
