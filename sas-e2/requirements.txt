@@ -1,0 +1,11 @@
+# SAS-E2 Phase 1 runtime dependencies (Colab/T4: 4-bit NF4 + fp16 compute).
+# On Colab, torch is already installed; installing this file is still the
+# simplest way to pin transformers/bitsandbytes for the fit and run scripts.
+torch>=2.5,<3
+transformers>=4.51,<5
+accelerate>=1.0,<2
+bitsandbytes>=0.45,<1
+huggingface_hub[hf_transfer]>=0.26
+safetensors>=0.4
+numpy>=1.24
+tqdm>=4.66

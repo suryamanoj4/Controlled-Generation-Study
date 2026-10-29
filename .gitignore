@@ -23,6 +23,9 @@ env/
 sas-e1/data/
 sas-e1/models/
 sas-e1/artifacts/
+sas-e2/data/
+sas-e2/models/
+sas-e2/.venv/
 # local copies of run outputs (downloaded from Colab)
 sas-e1/artifacts-lean/
 sas-e1/artifacts-pilot/
