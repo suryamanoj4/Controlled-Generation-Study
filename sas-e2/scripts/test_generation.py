@@ -95,6 +95,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-p", type=float, default=0.8)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--system",
+        default=None,
+        help="optional system message (same for every language)",
+    )
     parser.add_argument("--models-dir", default=str(DEFAULT_MODELS_DIR))
     parser.add_argument("--vectors-dir", default=str(DEFAULT_VECTORS_DIR))
     parser.add_argument("--out", default=None, help="JSON output path")
@@ -280,7 +285,10 @@ def generate_one(
 ) -> dict:
     import torch
 
-    messages = [{"role": "user", "content": prompt}]
+    messages = []
+    if args.system:
+        messages.append({"role": "system", "content": args.system})
+    messages.append({"role": "user", "content": prompt})
     try:
         rendered = tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
@@ -378,11 +386,19 @@ def run_language(model, tokenizer, model_key, commit, lang, args, gpu_device) ->
         model_key, commit, lang, args.layer, args.vectors_dir
     )
     injection = (diff * args.alpha).to(device=gpu_device, dtype=torch.float16)
+    vector_info = {
+        "layer": layer,
+        "pooling": meta["extraction"]["pooling"],
+        "alpha": args.alpha,
+        "vector_norm": float(diff.norm()),
+        "resid_norm": resid_norm,
+        "injection_norm": float(injection.norm()),
+    }
 
     print(
         f"[smoke] {model_key}/{lang}: layer={layer} pooling={meta['extraction']['pooling']} "
-        f"alpha={args.alpha} |v|={float(diff.norm()):.3f} "
-        f"|inject|={float(injection.norm()):.3f} resid={resid_norm:.3f}"
+        f"alpha={args.alpha} |v|={vector_info['vector_norm']:.3f} "
+        f"|inject|={vector_info['injection_norm']:.3f} resid={resid_norm:.3f}"
     )
 
     samples = []
@@ -425,7 +441,7 @@ def run_language(model, tokenizer, model_key, commit, lang, args, gpu_device) ->
             )
 
     summary = summarize(lang, samples)
-    return samples, summary, meta, paths
+    return samples, summary, meta, paths, vector_info
 
 
 def run_model(model_key: str, args: argparse.Namespace, gpu_index: int) -> dict:
@@ -452,7 +468,7 @@ def run_model(model_key: str, args: argparse.Namespace, gpu_index: int) -> dict:
     try:
         for lang in args.langs:
             try:
-                samples, summary, meta, paths = run_language(
+                samples, summary, meta, paths, vector_info = run_language(
                     model, tokenizer, model_key, commit, lang, args, gpu_device
                 )
                 samples_all.extend(samples)
@@ -460,9 +476,9 @@ def run_model(model_key: str, args: argparse.Namespace, gpu_index: int) -> dict:
                     {
                         "model": model_key,
                         **summary,
+                        **vector_info,
                         "vector_path": str(paths["base"]),
                         "cache_key": meta.get("cache_key"),
-                        "pooling": meta["extraction"]["pooling"],
                         "vector_created_utc": meta.get("created_utc"),
                     }
                 )
@@ -622,6 +638,7 @@ def main() -> int:
                 "top_p": args.top_p,
                 "top_k": args.top_k,
                 "seed": args.seed,
+                "system": args.system,
             },
             "runs": runs,
             "summaries": summaries,
