@@ -43,12 +43,17 @@ Output layout:
 The default pooling is the last non-pad token (CAA convention). Use
 --pooling mean for mean-over-content-tokens. Layer indices are 0-based
 outputs of decoder blocks; the same site is used when steering.
+
+Tokenization keeps the document end (left truncation) when pooling=last.
+The default max_length=512 covers 97.8% of Telugu stat reviews and >99%
+of the other four languages; use 768 for zero truncation at higher cost.
 """
 from __future__ import annotations
 
 import argparse
 import gc
 import hashlib
+import importlib.metadata
 import json
 import os
 import sys
@@ -87,6 +92,13 @@ DEFAULT_TEMPLATE = "{text}"
 def truncation_side(pooling: str) -> str:
     """Keep the document end for last-token pooling."""
     return "left" if pooling == "last" else "right"
+
+
+def package_version(name: str) -> str:
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +145,12 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_TEMPLATE,
         help="text wrapper containing {text} (default: {text})",
     )
-    parser.add_argument("--max-length", type=int, default=192, help="token truncation (default: 192)")
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        default=512,
+        help="token truncation (default: 512; 768 = no truncation on Phase 1 stat)",
+    )
     parser.add_argument(
         "--batch-size",
         type=int,
@@ -868,6 +885,7 @@ def process_model(name: str, spec: dict, langs: list[str], args: argparse.Namesp
                     },
                     "torch": torch.__version__,
                     "transformers": __import__("transformers").__version__,
+                    "bitsandbytes": package_version("bitsandbytes"),
                     "gpu": torch.cuda.get_device_name(device_index),
                 },
                 "data": {

@@ -7,8 +7,9 @@ with and without the vector. It checks the failures that broke SAS-E1:
 empty output, wrong script/language, thinking-token leakage, and a vector
 that does not change the output.
 
-Default: qwen3-4b, all five languages, 2 prompts/language, 64 new tokens.
-That is 20 generations - small enough to run before the full eval.
+Default: qwen3-4b, all five languages, 2 prompts/language, 160 new tokens.
+That is 20 generations - small enough to run before the full eval. A short
+direct-answer system prompt is used by default (pass --no-system to disable).
 
 The vector is fitted on the base transformer (AutoModel) but applied here to
 the causal LM (AutoModelForCausalLM); the decoder-block residual site is the
@@ -20,6 +21,7 @@ Examples:
   python3 scripts/test_generation.py --only qwen3-4b --lang hi --prompts 1
   python3 scripts/test_generation.py --langs hi,te --layer 18 --alpha 2.0
   python3 scripts/test_generation.py --models all
+  python3 scripts/test_generation.py --no-system
 """
 from __future__ import annotations
 
@@ -57,6 +59,11 @@ SCRIPTS = {
     "ta": re.compile(r"[\u0B80-\u0BFF]"),
 }
 THINK_TOKENS = ("<think>", "</think>")
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a helpful assistant. Follow the user's instruction and write the "
+    "requested text directly in the same language as the user. Do not repeat "
+    "or explain the instruction."
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -83,7 +90,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--prompts", type=int, default=2, help="prompts per language (default: 2)")
     parser.add_argument(
-        "--max-new-tokens", type=int, default=64, help="generation length (default: 64)"
+        "--max-new-tokens",
+        type=int,
+        default=160,
+        help="generation length (default: 160, matching the Phase 1 eval)",
     )
     parser.add_argument(
         "--layer",
@@ -97,8 +107,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
         "--system",
-        default=None,
-        help="optional system message (same for every language)",
+        default=DEFAULT_SYSTEM_PROMPT,
+        help="system message (default: direct-answer prompt; same for every language)",
+    )
+    parser.add_argument(
+        "--no-system",
+        action="store_true",
+        help="disable the default system prompt",
     )
     parser.add_argument("--models-dir", default=str(DEFAULT_MODELS_DIR))
     parser.add_argument("--vectors-dir", default=str(DEFAULT_VECTORS_DIR))
@@ -111,6 +126,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--prompts must be > 0")
     if args.max_new_tokens <= 0:
         parser.error("--max-new-tokens must be > 0")
+    if args.no_system:
+        args.system = None
     return args
 
 
@@ -508,7 +525,7 @@ def run_model(model_key: str, args: argparse.Namespace, gpu_index: int) -> dict:
 def print_table(summaries: list[dict]) -> None:
     header = (
         f"{'model':12s} {'lang':4s} {'empty':>5s} {'script base/vec':>15s} "
-        f"{'changed':>7s} {'think':>5s} {'tok base/vec':>15s}"
+        f"{'changed':>7s} {'think':>5s} {'trunc':>5s} {'tok base/vec':>15s}"
     )
     print(header)
     print("-" * len(header))
@@ -517,10 +534,11 @@ def print_table(summaries: list[dict]) -> None:
         empty = base["empty"] + vec["empty"]
         changed = f"{row['changed']}/{row['n_prompts']}"
         think = base["think_leak"] + vec["think_leak"]
+        trunc = base["truncated"] + vec["truncated"]
         print(
             f"{row['model']:12s} {row['lang']:4s} {empty:5d} "
             f"{base['script_mean']:6.2f}/{vec['script_mean']:.2f}     "
-            f"{changed:>7s} {think:5d} "
+            f"{changed:>7s} {think:5d} {trunc:5d} "
             f"{base['tokens_mean']:7.1f}/{vec['tokens_mean']:.1f}"
         )
 
@@ -600,6 +618,18 @@ def main() -> int:
     if summaries:
         print()
         print_table(summaries)
+        total_truncated = sum(
+            row["baseline"]["truncated"] + row["vector"]["truncated"]
+            for row in summaries
+        )
+        total_generations = sum(
+            row["baseline"]["n"] + row["vector"]["n"] for row in summaries
+        )
+        if total_truncated:
+            print(
+                f"[smoke] warning: {total_truncated}/{total_generations} generations "
+                f"hit max_new_tokens={args.max_new_tokens}"
+            )
 
     failures = evaluate_failures(summaries, errors, args.alpha)
     passed = not failures
