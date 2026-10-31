@@ -11,6 +11,10 @@ Default: qwen3-4b, all five languages, 2 prompts/language, 160 new tokens.
 That is 20 generations - small enough to run before the full eval. A short
 direct-answer system prompt is used by default (pass --no-system to disable).
 
+Prompts are generated in batches (8 for <=4B, 4 for 8B by default) with
+left padding. Baseline and vector batches use the same prompt order and
+batch seed, so paired differences are due to the vector, not sampling.
+
 The vector is fitted on the base transformer (AutoModel) but applied here to
 the causal LM (AutoModelForCausalLM); the decoder-block residual site is the
 same. Injection is added to every position at the chosen block's output, using
@@ -96,6 +100,12 @@ def parse_args() -> argparse.Namespace:
         help="generation length (default: 160, matching the Phase 1 eval)",
     )
     parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=0,
+        help="prompts per generate call; 0 = auto (8 for <=4B, 4 for 8B)",
+    )
+    parser.add_argument(
         "--layer",
         default="auto",
         help="decoder block index, or 'auto' for max Cohen's d (default: auto)",
@@ -115,6 +125,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="disable the default system prompt",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="print batch summaries only, not every generated text",
+    )
     parser.add_argument("--models-dir", default=str(DEFAULT_MODELS_DIR))
     parser.add_argument("--vectors-dir", default=str(DEFAULT_VECTORS_DIR))
     parser.add_argument("--out", default=None, help="JSON output path")
@@ -126,6 +141,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--prompts must be > 0")
     if args.max_new_tokens <= 0:
         parser.error("--max-new-tokens must be > 0")
+    if args.batch_size < 0:
+        parser.error("--batch-size must be >= 0")
     if args.no_system:
         args.system = None
     return args
@@ -290,33 +307,56 @@ def make_steering_hook(injection):
     return hook
 
 
-def generate_one(
+def generate_batch(
     model,
     tokenizer,
-    prompt: str,
+    prompts: list[str],
     lang: str,
     args: argparse.Namespace,
     seed: int,
     layer: int,
     injection,
-) -> dict:
+) -> list[dict]:
     import torch
 
-    messages = []
-    if args.system:
-        messages.append({"role": "system", "content": args.system})
-    messages.append({"role": "user", "content": prompt})
-    try:
-        rendered = tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
-        )
-    except TypeError as exc:
-        raise RuntimeError(
-            "apply_chat_template(enable_thinking=False) failed; need transformers>=4.51"
-        ) from exc
+    if not prompts:
+        return []
 
-    inputs = tokenizer(rendered, return_tensors="pt").to(model.device)
+    rendered = []
+    for prompt in prompts:
+        messages = []
+        if args.system:
+            messages.append({"role": "system", "content": args.system})
+        messages.append({"role": "user", "content": prompt})
+        try:
+            rendered.append(
+                tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    enable_thinking=False,
+                )
+            )
+        except TypeError as exc:
+            raise RuntimeError(
+                "apply_chat_template(enable_thinking=False) failed; need transformers>=4.51"
+            ) from exc
+
+    # Left padding is required for batched decoder-only generation.
+    inputs = tokenizer(
+        rendered,
+        padding=True,
+        truncation=True,
+        max_length=2048,
+        return_tensors="pt",
+    ).to(model.device)
     prompt_len = int(inputs["input_ids"].shape[1])
+
+    eos_ids = model.generation_config.eos_token_id or tokenizer.eos_token_id
+    if isinstance(eos_ids, int):
+        eos_ids = [eos_ids]
+    eos_id_set = set(eos_ids)
+
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
@@ -337,31 +377,46 @@ def generate_one(
                 top_k=args.top_k,
                 repetition_penalty=1.0,
                 pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.eos_token_id,
+                eos_token_id=eos_ids,
             )
     finally:
         if handle is not None:
             handle.remove()
     elapsed = time.perf_counter() - started
 
-    new_ids = output[0, prompt_len:]
-    ids = [int(token) for token in new_ids.tolist()]
-    text = tokenizer.decode(new_ids, skip_special_tokens=True).strip()
-
+    pad_id = tokenizer.pad_token_id
     think_ids = {tokenizer.convert_tokens_to_ids(token) for token in THINK_TOKENS}
     think_ids.discard(tokenizer.unk_token_id)
     think_ids.discard(None)
 
-    return {
-        "text": text,
-        "n_new_tokens": len(ids),
-        "empty": not text,
-        "hit_eos": bool(ids) and ids[-1] == tokenizer.eos_token_id,
-        "think_leak": any(token in think_ids for token in ids),
-        "script_ratio": script_ratio(text, lang),
-        "rep4": rep4_ratio(text),
-        "seconds": round(elapsed, 2),
-    }
+    results = []
+    for row_index, _prompt in enumerate(prompts):
+        generated = output[row_index, prompt_len:].tolist()
+        hit_eos = any(token in eos_id_set for token in generated)
+        if hit_eos:
+            first_eos = next(
+                index for index, token in enumerate(generated) if token in eos_id_set
+            )
+            generated = generated[:first_eos]
+        while generated and generated[-1] == pad_id:
+            generated.pop()
+        text = tokenizer.decode(generated, skip_special_tokens=True).strip()
+        results.append(
+            {
+                "text": text,
+                "n_new_tokens": len(generated),
+                "empty": not text,
+                "hit_eos": hit_eos,
+                "think_leak": any(token in think_ids for token in generated),
+                "script_ratio": script_ratio(text, lang),
+                "rep4": rep4_ratio(text),
+                "seconds": round(elapsed / len(prompts), 2),
+                "batch_seconds": round(elapsed, 2),
+                "batch_size": len(prompts),
+                "batch_seed": seed,
+            }
+        )
+    return results
 
 
 def summarize(lang: str, samples: list[dict]) -> dict:
@@ -403,6 +458,7 @@ def run_language(model, tokenizer, model_key, commit, lang, args, gpu_device) ->
         model_key, commit, lang, args.layer, args.vectors_dir
     )
     injection = (diff * args.alpha).to(device=gpu_device, dtype=torch.float16)
+    batch_size = args.batch_size or (4 if MODELS[model_key]["params"] >= 7_000_000_000 else 8)
     vector_info = {
         "layer": layer,
         "pooling": meta["extraction"]["pooling"],
@@ -410,51 +466,68 @@ def run_language(model, tokenizer, model_key, commit, lang, args, gpu_device) ->
         "vector_norm": float(diff.norm()),
         "resid_norm": resid_norm,
         "injection_norm": float(injection.norm()),
+        "batch_size": batch_size,
     }
 
     print(
         f"[smoke] {model_key}/{lang}: layer={layer} pooling={meta['extraction']['pooling']} "
-        f"alpha={args.alpha} |v|={vector_info['vector_norm']:.3f} "
+        f"alpha={args.alpha} batch={batch_size} |v|={vector_info['vector_norm']:.3f} "
         f"|inject|={vector_info['injection_norm']:.3f} resid={resid_norm:.3f}"
     )
 
     samples = []
-    for index, row in enumerate(prompts):
-        seed = args.seed + 1000 * LANGS.index(lang) + index
-        baseline = generate_one(
-            model, tokenizer, row["prompt"], lang, args, seed, layer, injection=None
+    n_batches = (len(prompts) + batch_size - 1) // batch_size
+    for batch_index, start in enumerate(range(0, len(prompts), batch_size)):
+        chunk = prompts[start : start + batch_size]
+        seed = args.seed + 1000 * LANGS.index(lang) + batch_index
+        chunk_prompts = [row["prompt"] for row in chunk]
+
+        baseline_batch = generate_batch(
+            model, tokenizer, chunk_prompts, lang, args, seed, layer, injection=None
         )
-        baseline.update(
-            {
-                "condition": "baseline",
-                "lang": lang,
-                "prompt_id": row["id"],
-                "prompt": row["prompt"],
-                "changed": None,
-            }
+        steered_batch = generate_batch(
+            model, tokenizer, chunk_prompts, lang, args, seed, layer, injection=injection
         )
 
-        steered = generate_one(
-            model, tokenizer, row["prompt"], lang, args, seed, layer, injection=injection
-        )
-        steered.update(
-            {
-                "condition": "vector",
-                "lang": lang,
-                "prompt_id": row["id"],
-                "prompt": row["prompt"],
-                "changed": baseline["text"] != steered["text"],
-            }
-        )
-        samples.extend([baseline, steered])
+        for row, baseline, steered in zip(chunk, baseline_batch, steered_batch):
+            baseline.update(
+                {
+                    "condition": "baseline",
+                    "lang": lang,
+                    "prompt_id": row["id"],
+                    "prompt": row["prompt"],
+                    "changed": None,
+                }
+            )
+            steered.update(
+                {
+                    "condition": "vector",
+                    "lang": lang,
+                    "prompt_id": row["id"],
+                    "prompt": row["prompt"],
+                    "changed": baseline["text"] != steered["text"],
+                }
+            )
+            samples.extend([baseline, steered])
 
-        for label, sample in (("baseline", baseline), ("vector", steered)):
-            text = sample["text"] if sample["text"] else "<EMPTY>"
-            clipped = " ".join(text.split())
-            clipped = clipped if len(clipped) <= 260 else clipped[:260] + " …"
+            if not args.quiet:
+                for label, sample in (("baseline", baseline), ("vector", steered)):
+                    text = sample["text"] if sample["text"] else "<EMPTY>"
+                    clipped = " ".join(text.split())
+                    clipped = clipped if len(clipped) <= 260 else clipped[:260] + " …"
+                    print(
+                        f"[smoke] {lang}/{row['id']} {label:8s} "
+                        f"{sample['n_new_tokens']:3d} tok {sample['seconds']:5.2f}s: {clipped}"
+                    )
+
+        if args.quiet:
+            total_tokens = sum(
+                row["n_new_tokens"] for row in baseline_batch + steered_batch
+            )
             print(
-                f"[smoke] {lang}/{row['id']} {label:8s} "
-                f"{sample['n_new_tokens']:3d} tok {sample['seconds']:5.2f}s: {clipped}"
+                f"[smoke] {lang} batch {batch_index + 1}/{n_batches} "
+                f"n={len(chunk)} seed={seed} {baseline_batch[0]['batch_seconds']:.1f}s "
+                f"{total_tokens} tok"
             )
 
     summary = summarize(lang, samples)
@@ -595,7 +668,8 @@ def main() -> int:
     print(
         f"[smoke] GPU: {torch.cuda.get_device_name(gpu_index)} | "
         f"model(s): {', '.join(model_keys)} | languages: {', '.join(args.langs)} | "
-        f"prompts/lang: {args.prompts}"
+        f"prompts/lang: {args.prompts} | batch: "
+        f"{args.batch_size if args.batch_size else 'auto'}"
     )
 
     runs = []
@@ -662,6 +736,7 @@ def main() -> int:
                 "langs": args.langs,
                 "prompts": args.prompts,
                 "max_new_tokens": args.max_new_tokens,
+                "batch_size": args.batch_size,
                 "layer": args.layer,
                 "alpha": args.alpha,
                 "temperature": args.temperature,
