@@ -1,6 +1,7 @@
 # SAS E2 — Frozen Study Plan (Low-Resource Control & Style Steering)
 
 > **Status:** frozen 2026-10-26 · supersedes the exploratory notes in [[SAS E2 — Low-Resource Style Steering Literature Review]]
+> **Phase 1 status (2026-11-02):** the original language-control protocol was superseded by the sentiment-L1 pivot. Phase 1 was closed after pilot; see [[SAS E2 — Phase 1 Pilot Results (Sentiment Steering)]]. No complete Phase 1 run.
 > **Programme:** follow-up to [[SAS E1 — Complexity Study Design]] / [[SAS E1 — Results (Lean Run)]]
 > **Framing:** *training-free inference-time control under low-resource conditions*, with an Indic core and English as the high-resource anchor
 > **Hardware:** Colab T4 (16 GB, no bf16) · both models at **4-bit NF4**, fp16 compute
