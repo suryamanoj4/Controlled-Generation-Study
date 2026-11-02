@@ -66,7 +66,8 @@ THINK_TOKENS = ("<think>", "</think>")
 DEFAULT_SYSTEM_PROMPT = (
     "You are a helpful assistant. Follow the user's instruction and write the "
     "requested text directly in the same language as the user. Do not repeat "
-    "or explain the instruction."
+    "or explain the instruction. Do not ask the user for more information; "
+    "invent reasonable details if needed."
 )
 
 
